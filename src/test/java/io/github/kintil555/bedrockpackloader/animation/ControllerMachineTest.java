@@ -62,7 +62,8 @@ class ControllerMachineTest {
         assertEquals("walk", machine.state());
         assertTrue(walking.stateChanged());
         assertEquals("animation.walk", walking.animations().get(0));
-        assertEquals(1.0, moving.variable("entered") instanceof Double d ? d : -1.0);
+        double entered = moving.variable("entered") instanceof Double d ? d : -1.0;
+        assertEquals(1.0, entered);
 
         ControllerMachine.Step idle = machine.step(new Object(), scope(0));
         assertEquals("idle", machine.state());
