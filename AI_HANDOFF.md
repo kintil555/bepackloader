@@ -61,7 +61,7 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 
 ## 3. Verified facts (do not re-investigate)
 ### Still open on the player (2026-10-18)
-- Armor, elytra and head items are NOT drawn on the Bedrock player (vanilla layers are skipped). GeckoLib's `ItemArmorGeoLayer<T extends LivingEntity & GeoAnimatable,...>` cannot be used as is: our animatable is a singleton `GeoReplacedEntity`, not a `LivingEntity` (its bridge methods cast to LivingEntity). Needs an own `GeoRenderLayer<BedrockEntityAnimatable, Avatar, R>` that copies `submitVanillaEquippableRender` logic with the `Avatar` as wearer. Needs in-game iteration.
+- Armor, elytra and head items: `BedrockArmorLayer` (own `GeoRenderLayer<BedrockEntityAnimatable, Avatar, R>`, registered in `BedrockEntityBinding.addHeldItemLayer`) draws vanilla equippable parts on bones head/body/rightArm/leftArm/rightLeg/leftLeg. Uses GeckoLib's `HUMANOID_ARMOR_MODEL`/`GENERIC_ELYTRA_MODEL` and `VanillaModelModifier` to position the part (the model `setupAnim` would otherwise reset it). Compile-checked only; if parts are misplaced/mirrored in game, adjust the `scale(-1,-1,1)` / `setPos` block in `submitEquippable` (copied from `ItemArmorGeoLayer`). Skull blocks on the head use the generic item model; leggings waist (body part) is not drawn.
 - `controller.animation.persona.blink` (eyelid UV swap) is not provided; the entity skips unresolved controllers.
 - Sleeping pose stays at rest: the vanilla bed rotation is done in `LivingEntityRenderer.setupRotations`, which the GeckoLib path does not apply.
 

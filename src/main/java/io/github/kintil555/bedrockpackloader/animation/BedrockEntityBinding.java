@@ -72,6 +72,7 @@ public final class BedrockEntityBinding {
     private static void addHeldItemLayer(GeoReplacedEntityRenderer<BedrockEntityAnimatable, Avatar, AvatarRenderState> renderer,
                                          EntityRendererProvider.Context ctx) {
         ((GeoReplacedEntityRenderer) renderer).withRenderLayer(new BedrockHeldItemLayer(ctx, (GeoRenderer) renderer));
+        ((GeoReplacedEntityRenderer) renderer).withRenderLayer(new BedrockArmorLayer(ctx, (GeoRenderer) renderer));
     }
 
     private static @Nullable GeoReplacedEntityRenderer<BedrockEntityAnimatable, Avatar, AvatarRenderState> createPlayerRenderer(

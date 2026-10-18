@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Armor, elytra and head items on the Bedrock player: new `BedrockArmorLayer` reads the worn equipment from the `Avatar` and draws vanilla equippable armor (helmet on `head`, chest on `body`/`rightArm`/`leftArm`, leggings and boots on `rightLeg`/`leftLeg`), elytra on `body`, and non-equippable head items on `head`; part sizes are scaled to the Bedrock bone cube. Bones missing from the model are skipped. Compile-checked only, not verified in game.
 - Built-in player poses the pack references but does not define (`animation.player.riding.arms`, `.riding.legs`, `.sleeping`, `.look_at_target.ui`) are generated (`BuiltinAnimations`); riding uses the Java model's constant offsets (arms -36 deg, legs -81 deg), sleeping and the UI pose stay at rest. Added to the translated pack only when the pack lacks them.
 - Cape: the `cape` texture slot of a render controller now uses the player's real cape texture (the pack only names `cape_invisible`, a placeholder the engine replaces in Bedrock) and draws nothing when the player has no cape or it is hidden.
 - More vanilla texture coverage: item aliases for bundles (all colours, open/back/front), harnesses, music discs and 16 single items (`totem`, `reeds`, `sign*`, `door_wood`...); blocks named `<name>_0` map to the Java `<name>` texture. Test pack SP2: 1,478 -> 1,606 textures mapped (items 519 -> 613, blocks 877 -> 911). The rest is mostly Bedrock-only (UI, particle sheets, pottery patterns, `carried/` icons) or has no 1:1 Java texture.
