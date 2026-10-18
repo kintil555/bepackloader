@@ -11,18 +11,11 @@ base {
 }
 
 repositories {
+    mavenCentral()
+    maven { url = 'https://maven.fabricmc.net/' }
     maven {
         name = 'GeckoLib'
         url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
-    }
-}
-
-loom {
-    runs {
-        client {
-            client()
-            ideConfigGenerated(true)
-        }
     }
 }
 

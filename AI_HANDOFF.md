@@ -39,7 +39,7 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 | Molang evaluator | `molang/*` (`MolangExpression`, `MolangScope`, `MolangContext`, `MolangMath`, `MolangParser`, `Node`) | **Verified**: `MolangTest` (15 tests, run with plain javac + stub JUnit, JDK 25) and all 11,447 Molang strings of the test pack parse (0 failures, ~0.5 s). No Minecraft dependency. |
 
 ### NOT yet run anywhere
-- `gradle build` (sandbox cannot reach maven.fabricmc.net; **the repo has `.github/workflows/build.yml`, let CI build, do not try locally**)
+- `gradle build` (sandbox cannot reach maven.fabricmc.net; **CI is `.github/workflows/build.yml` (JDK 25, `./gradlew build`, uploads jar + test reports), same layout as MinimalsClient. Let CI build, do not try locally.** Gradle wrapper 9.5.1 is committed.)
 - end-to-end translation of a real pack
 - in-game launch
 - unit tests: **`src/test/java` is empty** (JUnit is declared in `build.gradle` but no tests exist yet)
@@ -59,10 +59,10 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 - **It bakes only `definitions[0]`** of a geo file. Multi-geometry files (up to 474 per file in the test pack) MUST be split. Done in `GeometrySplitter`.
 - Supported geo `format_version`: 1.12.0, 1.14.0, 1.16.0, 1.19.30, 1.21.0. Test pack also has `1.26.10` (unsupported); we map it to 1.21.0 (**assumption: same schema, unverified at runtime**).
 - Legacy 1.8.0 geometry (`geometry.x` top-level keys) is unsupported by GeckoLib and by us (the test pack has none).
-- Maven coordinates unverified. Cloudsmith repo `https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/` has artifact `geckolib-fabric-26.2`, but the group id `com.geckolib` is a guess. `build.gradle` prefers a jar in `libs/`.
+- Maven coordinates unverified. Cloudsmith repo `https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/` has artifact `geckolib-fabric-26.2`, but the group id `com.geckolib` is a guess. `build.gradle` prefers a jar in `libs/`; the GeckoLib jar (MIT) is now **committed** at `libs/geckolib-fabric-26_2-5_5_5.jar` so CI does not depend on the unverified Cloudsmith coordinates.
 
 ### Minecraft 26.2 API facts
-- Loom plugin id `net.fabricmc.fabric-loom` (non-remap), Loom 1.17-SNAPSHOT, Gradle 9.5.1, Fabric API 0.161.0+26.2, loader 0.19.5. No `mappings` line.
+- Loom plugin id `net.fabricmc.fabric-loom` (non-remap), Loom 1.15.2, Gradle 9.5.1 (wrapper), Fabric API 0.157.0+26.2, loader 0.19.3: **same set as `kintil555/MinimalsClient`, which builds on 26.2** (the earlier 1.17-SNAPSHOT/0.161.0/0.19.5 values were unverified and were replaced). No `mappings` line. Repositories (Fabric maven, Maven Central) must be declared in `build.gradle`, `pluginManagement` only covers plugins.
 - `ResourceLocation` is now `net.minecraft.resources.Identifier` (`fromNamespaceAndPath`).
 - Fabric API `ResourceLoader` (v1) has **no** hook for dynamic/user packs (only `registerBuiltinPack` for mod-bundled ones). Hence the mixin on `PackRepository.<init>` that appends `BedrockPackRepositorySource` when a `ClientPackSource` is among the sources.
 - Custom pack = implement `PackResources` and create via `Pack.readMetaAndCreate(PackLocationInfo, Pack.ResourcesSupplier, PackType, PackSelectionConfig)`. `getMetadataSection` returns `PackMetadataSection(description, SharedConstants.getCurrentVersion().packVersion(CLIENT_RESOURCES).minorRange())`.

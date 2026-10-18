@@ -5,8 +5,9 @@ run/
 *.iml
 .vscode/
 out/
-# GeckoLib is supplied locally by the developer.
+# Third-party jars stay local, except GeckoLib (MIT, see libs/GECKOLIB-LICENSE.txt) which CI needs.
 libs/*.jar
+!libs/geckolib-fabric-26_2-*.jar
 # Bedrock packs are third-party content and must never be committed.
 bedrock_packs/
 *.mcpack
