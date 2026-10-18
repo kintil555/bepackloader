@@ -4,6 +4,9 @@
   "package": "io.github.kintil555.bedrockpackloader.mixin.client",
   "compatibilityLevel": "JAVA_25",
   "client": [
+    "AvatarRendererMixin",
+    "EntityRenderersMixin",
+    "LivingEntityRendererMixin",
     "PackRepositoryMixin"
   ],
   "injectors": {

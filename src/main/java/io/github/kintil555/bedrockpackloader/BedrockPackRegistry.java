@@ -1,5 +1,6 @@
 package io.github.kintil555.bedrockpackloader;
 
+import io.github.kintil555.bedrockpackloader.animation.BedrockEntityBinding;
 import io.github.kintil555.bedrockpackloader.index.BedrockAssetIndex;
 import io.github.kintil555.bedrockpackloader.pack.BedrockPackResources;
 import java.util.List;
@@ -30,6 +31,7 @@ public final class BedrockPackRegistry implements ResourceManagerReloadListener 
                 .map(pack -> ((BedrockPackResources) pack).translated().index())
                 .toList();
         this.active = indices;
+        BedrockEntityBinding.reset();
 
         for (BedrockAssetIndex index : indices) {
             BedrockPackLoaderMod.LOGGER.info("Bedrock pack '{}' active: {} geometries, {} animations, {} controllers, {} client entities",

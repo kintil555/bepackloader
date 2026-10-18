@@ -1,6 +1,7 @@
 package io.github.kintil555.bedrockpackloader;
 
 import com.mojang.logging.LogUtils;
+import io.github.kintil555.bedrockpackloader.animation.BedrockEntityBinding;
 import io.github.kintil555.bedrockpackloader.convert.TextureMapper;
 import io.github.kintil555.bedrockpackloader.pack.BedrockPackRepositorySource;
 import java.io.IOException;
@@ -31,6 +32,7 @@ public final class BedrockPackLoaderMod implements ClientModInitializer {
             LOGGER.warn("Could not create the {} folder", PACK_FOLDER, ex);
         }
 
+        BedrockEntityBinding.install();
         ResourceLoader.get(PackType.CLIENT_RESOURCES)
                 .registerReloadListener(Identifier.fromNamespaceAndPath(MOD_ID, "bedrock_packs"), BedrockPackRegistry.INSTANCE);
         LOGGER.info("Bedrock Pack Loader ready. Put Bedrock packs (.mcpack, .zip or folders) into <game dir>/{}", PACK_FOLDER);
