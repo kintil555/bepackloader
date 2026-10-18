@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Title screen: "?" button right of the small icon row opens `BedrockHelpScreen` (accepted formats, folders, how to enable; en_us and id_id).
+- Title screen: "?" button in the first free slot right of the small icon row (late Fabric phase, avoids Mod Menu's button) opens `BedrockHelpScreen` (accepted formats, folders, how to enable; en_us and id_id).
 - Held items: `BedrockHeldItemLayer` draws main/off-hand items on the Bedrock player through the bones `rightItem` / `leftItem` (bones missing from the model are skipped).  Bone names are matched case-insensitively.
 - Render controller `part_visibility` (bone patterns with wildcards, Molang conditions) applied per pass.
 - Render controllers: parse `render_controllers/`, evaluate geometry/texture selection (arrays, conditions) and draw one pass per active controller for the player.

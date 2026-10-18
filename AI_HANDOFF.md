@@ -51,7 +51,7 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 
 | Held items on the Bedrock player | `animation/BedrockHeldItemLayer` (generic over `R extends GeoRenderState`), registered in `BedrockEntityBinding.addHeldItemLayer` via raw types | Compiled with javac 25 against MC 26.2 + GeckoLib jars: only errors are missing JOML in the sandbox. Not run in game. Bones `rightItem`/`leftItem` are an **assumption** from vanilla Bedrock `player.geo`; check the test pack's player geometry. |
 
-| Help button on title screen | `mixin/client/TitleScreenMixin` (TAIL of `init`, positioned from the shadowed `friends` button: x + 72), `screen/BedrockHelpScreen`, lang keys `bedrockpackloader.help.*` | Compiled with javac 25 against the MC 26.2 jar (Mixin and Brigadier stubbed). Not run in game: check the button position and text wrapping. |
+| Help button on title screen | `screen/TitleHelpButton` (Fabric `ScreenEvents.AFTER_INIT` in a late phase after the default one, so Mod Menu etc. add their widgets first; takes the first free 20px slot right of the vanilla icon row, anchored on `FriendsButton`), `screen/BedrockHelpScreen`, lang keys `bedrockpackloader.help.*` | Compiled with javac 25 against the MC 26.2 and Fabric screen-api jars. Not run in game. History: a `TitleScreenMixin` with `@Shadow addRenderableWidget` crashed the game (inherited method cannot be shadowed) and was replaced. |
 
 ### NOT yet run anywhere
 - `gradle build` (sandbox cannot reach maven.fabricmc.net; **CI is `.github/workflows/build.yml` (JDK 25, `./gradlew build`, uploads jar + test reports), same layout as MinimalsClient. Let CI build, do not try locally.** Gradle wrapper 9.5.1 is committed.)

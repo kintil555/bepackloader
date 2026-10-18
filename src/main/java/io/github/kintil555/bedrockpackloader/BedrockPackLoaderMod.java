@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import io.github.kintil555.bedrockpackloader.animation.BedrockEntityBinding;
 import io.github.kintil555.bedrockpackloader.convert.TextureMapper;
 import io.github.kintil555.bedrockpackloader.pack.BedrockPackRepositorySource;
+import io.github.kintil555.bedrockpackloader.screen.TitleHelpButton;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,6 +34,7 @@ public final class BedrockPackLoaderMod implements ClientModInitializer {
         }
 
         BedrockEntityBinding.install();
+        TitleHelpButton.register();
         ResourceLoader.get(PackType.CLIENT_RESOURCES)
                 .registerReloadListener(Identifier.fromNamespaceAndPath(MOD_ID, "bedrock_packs"), BedrockPackRegistry.INSTANCE);
         LOGGER.info("Bedrock Pack Loader ready. Put Bedrock packs (.mcpack, .zip or folders) into <game dir>/{}", PACK_FOLDER);

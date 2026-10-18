@@ -7,7 +7,6 @@
     "AvatarRendererMixin",
     "EntityRenderersMixin",
     "LivingEntityRendererMixin",
-    "TitleScreenMixin",
     "PackRepositoryMixin"
   ],
   "injectors": {
