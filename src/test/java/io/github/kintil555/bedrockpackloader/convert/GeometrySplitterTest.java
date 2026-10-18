@@ -30,4 +30,12 @@ class GeometrySplitterTest {
             assertTrue(json.contains("\"name\":\"" + bone + "\""), bone);
         }
     }
+
+    @Test
+    void builtinAnimationsOnlyContainWantedIds() {
+        String json = new String(BuiltinAnimations.json(id -> id.endsWith("riding.arms")), java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue(json.contains("animation.player.riding.arms"));
+        assertFalse(json.contains("animation.player.sleeping"));
+        assertEquals(null, BuiltinAnimations.json(id -> false));
+    }
 }

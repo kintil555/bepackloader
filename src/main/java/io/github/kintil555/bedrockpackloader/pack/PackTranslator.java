@@ -3,6 +3,7 @@ package io.github.kintil555.bedrockpackloader.pack;
 import com.google.gson.JsonObject;
 import io.github.kintil555.bedrockpackloader.animation.MolangVariableBridge;
 import io.github.kintil555.bedrockpackloader.convert.AnimationSanitizer;
+import io.github.kintil555.bedrockpackloader.convert.BuiltinAnimations;
 import io.github.kintil555.bedrockpackloader.convert.BuiltinGeometry;
 import io.github.kintil555.bedrockpackloader.convert.FlipbookIndex;
 import io.github.kintil555.bedrockpackloader.convert.GeometrySplitter;
@@ -87,6 +88,7 @@ public final class PackTranslator {
         }
 
         addBuiltinGeometries(namespace, resources, index, report);
+        addBuiltinAnimations(namespace, resources, index, report);
         return new TranslatedPack(namespace, resources, index.build(), report);
     }
 
@@ -103,6 +105,22 @@ public final class PackTranslator {
                 report.geometries++;
             }
         });
+    }
+
+    /** Adds Bedrock's built-in player poses (riding, sleeping...) that the pack references but does not define. */
+    private static void addBuiltinAnimations(String namespace, VirtualResources resources, BedrockAssetIndex.Builder index,
+                                             TranslationReport report) {
+        byte[] json = BuiltinAnimations.json(id -> !index.hasAnimation(id));
+        if (json == null || !resources.putBytes(namespace, GECKOLIB_ANIMATIONS + BuiltinAnimations.FILE + ".json", json)) {
+            return;
+        }
+        Identifier file = Identifier.fromNamespaceAndPath(namespace, BuiltinAnimations.FILE);
+        for (String id : BuiltinAnimations.identifiers()) {
+            if (!index.hasAnimation(id)) {
+                index.animation(id, new BedrockAssetIndex.AnimationRef(file, id, 1.0, true));
+                report.animations++;
+            }
+        }
     }
 
     private static FlipbookIndex loadFlipbooks(BedrockPackFiles files, TranslationReport report) {

@@ -39,7 +39,8 @@ public abstract class LivingEntityRendererMixin {
         if (renderer == null) {
             return;
         }
-        List<RenderPass> passes = renderer.getAnimatable().renderPasses((GeoRenderState) (Object) state, avatarState.skin.body().texturePath());
+        List<RenderPass> passes = renderer.getAnimatable().renderPasses((GeoRenderState) (Object) state, avatarState.skin.body().texturePath(),
+                !avatarState.isInvisible && avatarState.showCape && avatarState.skin.cape() != null ? avatarState.skin.cape().texturePath() : null);
         if (passes == null) {
             renderer.submit(avatarState, poseStack, collector, camera);
         } else {

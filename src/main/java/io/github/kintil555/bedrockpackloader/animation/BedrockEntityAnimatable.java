@@ -75,7 +75,7 @@ public final class BedrockEntityAnimatable implements GeoReplacedEntity {
      * when the entity defines no usable render controller (the caller then draws the default model once); an empty
      * list means every controller is inactive.
      */
-    public @Nullable List<RenderPass> renderPasses(GeoRenderState renderState, @Nullable Identifier skin) {
+    public @Nullable List<RenderPass> renderPasses(GeoRenderState renderState, @Nullable Identifier skin, @Nullable Identifier cape) {
         BedrockEntityRuntime runtime = runtime(renderState);
         List<RenderPass> passes = new ArrayList<>();
         boolean any = false;
@@ -96,7 +96,12 @@ public final class BedrockEntityAnimatable implements GeoReplacedEntity {
             }
             String textureKey = controller.texture() == null ? null : key(runtime.evaluateString(controller.texture(), controller.arrays()), "texture.");
             Identifier texture = null;
-            if (textureKey != null && !textureKey.equals("default")) {
+            if ("cape".equals(textureKey)) {
+                if (cape == null) {
+                    continue; // The player has no cape: Bedrock then draws nothing for the cape controller.
+                }
+                texture = cape;
+            } else if (textureKey != null && !textureKey.equals("default")) {
                 String path = this.definition.textures().get(textureKey);
                 texture = path == null ? null : Identifier.fromNamespaceAndPath(this.index.namespace(), PathNames.toIdentifierPath(path) + ".png");
             }
