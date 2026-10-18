@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "io.github.kintil555.bedrockpackloader.mixin.client",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "PackRepositoryMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
