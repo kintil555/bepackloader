@@ -1,3 +1,9 @@
 {
-  "bedrockpackloader.pack.source": "Bedrock pack"
+  "bedrockpackloader.pack.source": "Bedrock pack",
+  "bedrockpackloader.help.tooltip": "How to install Bedrock resource packs",
+  "bedrockpackloader.help.title": "Installing Bedrock resource packs",
+  "bedrockpackloader.help.formats": "Formats: a pack folder, a .zip or a .mcpack file. The pack needs a manifest.json at its root (or inside a single top-level folder). .brarchive files inside the pack are read too.",
+  "bedrockpackloader.help.location": "Location: put the pack in the \"bedrock_packs\" folder of the game directory. The \"resourcepacks\" folder is scanned as well.",
+  "bedrockpackloader.help.enable": "Enable: open Options > Resource Packs, move the pack marked \"Bedrock pack\" to the selected list and click Done. A pack with subpacks shows one entry per subpack.",
+  "bedrockpackloader.help.notes": "Notes: textures replace vanilla ones only when the name matches and the size fits the vanilla layout. Player models and animations need the pack to define minecraft:player."
 }

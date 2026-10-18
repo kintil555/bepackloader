@@ -1,3 +1,9 @@
 {
-  "bedrockpackloader.pack.source": "Pack Bedrock"
+  "bedrockpackloader.pack.source": "Pack Bedrock",
+  "bedrockpackloader.help.tooltip": "Cara memasang resource pack Bedrock",
+  "bedrockpackloader.help.title": "Memasang resource pack Bedrock",
+  "bedrockpackloader.help.formats": "Format: folder pack, file .zip, atau .mcpack. Pack harus punya manifest.json di root (atau di dalam satu folder teratas). File .brarchive di dalam pack ikut dibaca.",
+  "bedrockpackloader.help.location": "Lokasi: taruh pack di folder \"bedrock_packs\" pada direktori game. Folder \"resourcepacks\" juga dipindai.",
+  "bedrockpackloader.help.enable": "Aktifkan: buka Options > Resource Packs, pindahkan pack berlabel \"Pack Bedrock\" ke daftar terpilih, lalu klik Done. Pack dengan subpack tampil satu entri per subpack.",
+  "bedrockpackloader.help.notes": "Catatan: tekstur hanya menggantikan tekstur vanilla jika namanya cocok dan ukurannya sesuai layout vanilla. Model dan animasi pemain butuh pack yang mendefinisikan minecraft:player."
 }
