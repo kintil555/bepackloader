@@ -16,10 +16,15 @@ public record BedrockManifest(
         String uuid,
         String version,
         boolean resourcePack,
-        List<Subpack> subpacks
+        List<Subpack> subpacks,
+        List<Setting> settings
 ) {
     /** A selectable variant of the pack, stored in {@code subpacks/<folderName>/}. */
     public record Subpack(String folderName, String name) {
+    }
+
+    /** A pack setting ({@code settings} in the manifest) with its default value as text: {@code true}/{@code false} for toggles, the option name for dropdowns. */
+    public record Setting(String name, String defaultValue) {
     }
 
     public static BedrockManifest parse(byte[] json) throws IOException {
@@ -60,7 +65,21 @@ public record BedrockManifest(
             }
         }
 
-        return new BedrockManifest(name, description, uuid, version, resourcePack, List.copyOf(subpacks));
+        List<Setting> settings = new ArrayList<>();
+        if (root.has("settings") && root.get("settings").isJsonArray()) {
+            for (JsonElement element : root.getAsJsonArray("settings")) {
+                if (!element.isJsonObject()) {
+                    continue;
+                }
+                JsonObject setting = element.getAsJsonObject();
+                String settingName = string(setting, "name", "");
+                if (!settingName.isEmpty()) {
+                    settings.add(new Setting(settingName, string(setting, "default", "")));
+                }
+            }
+        }
+
+        return new BedrockManifest(name, description, uuid, version, resourcePack, List.copyOf(subpacks), List.copyOf(settings));
     }
 
     private static @Nullable JsonObject object(JsonObject parent, String key) {

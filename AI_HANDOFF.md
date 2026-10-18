@@ -42,6 +42,8 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 
 | Keyframe Molang sanitiser | `convert/AnimationSanitizer` (pure Gson), `animation/MolangVariableBridge` (GeckoLib `variable.bpl_N`), hooked in `PackTranslator.translateAnimations`, test `AnimationSanitizerTest` | **Verified**: 3 tests pass (plain javac JDK 25 + stub JUnit); on the test pack's 27 animation files it rewrites 868 expressions (278 distinct), all 278 compile with `molang/`, 0 strings remain that GeckoLib's format rejects. Bridge + `PackTranslator` compile against the GeckoLib and MC 26.2 jars. Not run in game. |
 
+| Entity runtime pieces (not wired in yet) | `pack/PackSettings` + `BedrockManifest.settings`, `animation/EntityQuerySnapshot` (queries), `ControllerMachine` (controller state machine), `BedrockEntityRuntime`, `BedrockEntityAnimatable`, `BedrockGeoModel`, `EntityQueryCapture`, `BedrockDataTickets` | `PackSettings`, `EntityQuerySnapshot`, `ControllerMachine`: **verified** by `ControllerMachineTest` (5 tests, plain javac + stub JUnit). The rest: compiled against the GeckoLib and MC 26.2 jars only. Nothing references them yet: no mixin, so no behaviour change in game. |
+
 ### NOT yet run anywhere
 - `gradle build` (sandbox cannot reach maven.fabricmc.net; **CI is `.github/workflows/build.yml` (JDK 25, `./gradlew build`, uploads jar + test reports), same layout as MinimalsClient. Let CI build, do not try locally.** Gradle wrapper 9.5.1 is committed.)
 - end-to-end translation of a real pack
@@ -120,6 +122,11 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 5. Render controllers (`render_controllers`), attachables (held/armor items), particles, sounds (`sounds.json` / `sound_definitions.json`), UI textures, PBR (`_mer`/`_normal`) if shaders allow.
 6. Extend alias tables to raise vanilla coverage; consider `terrain_texture.json` / `item_texture.json` for authoritative names.
 7. Optional: legacy 1.8.0 geometry conversion, in-game pack settings (Bedrock `settings` in manifest are currently ignored).
+
+### Entity binding: what is left (player first, subpack SP1)
+- Mixins still to write: `EntityRenderers.createAvatarRenderers` HEAD (capture `EntityRendererProvider.Context`), `AvatarRenderer.extractRenderState(Avatar, AvatarRenderState, float)` TAIL (call the Geo renderer's `extractRenderState`), `LivingEntityRenderer.submit(LivingEntityRenderState, PoseStack, SubmitNodeCollector, CameraRenderState)` HEAD cancellable when `this instanceof AvatarRenderer` and the player has a Bedrock definition. `AvatarRenderer` cannot be replaced (the map type is `AvatarRenderer`), so hook, do not substitute. Player texture = `AvatarRenderState.skin.body().texturePath()`.
+- Then: `MolangVariableBridge.setScopeProvider` (read `BedrockDataTickets` scope from `ControllerState.renderState()`), reset the binding in `BedrockPackRegistry.onResourceManagerReload`, add the mixins to `bedrockpackloader.mixins.json`.
+- Known approximations: render controllers are not evaluated (geometry/texture = `default` or first entry); controller state animations beyond the first slot use extra GeckoLib controllers; blend weight expressions are ignored; `modified_move_speed`, `target_*` and other queries are not supported yet (evaluate to 0, reported once).
 
 ## 6. Unverified assumptions (check these when something fails)
 

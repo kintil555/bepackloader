@@ -1,5 +1,6 @@
 package io.github.kintil555.bedrockpackloader.index;
 
+import io.github.kintil555.bedrockpackloader.pack.PackSettings;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -22,6 +23,7 @@ public final class BedrockAssetIndex {
     private final Map<String, AnimationRef> animations;
     private final Map<String, AnimationControllerDefinition> controllers;
     private final Map<String, ClientEntityDefinition> entities;
+    private final PackSettings settings;
 
     private BedrockAssetIndex(Builder builder) {
         this.namespace = builder.namespace;
@@ -29,6 +31,12 @@ public final class BedrockAssetIndex {
         this.animations = Map.copyOf(builder.animations);
         this.controllers = Map.copyOf(builder.controllers);
         this.entities = Map.copyOf(builder.entities);
+        this.settings = builder.settings;
+    }
+
+    /** The pack settings with their default values (used by {@code q.is_pack_setting_*}). */
+    public PackSettings settings() {
+        return this.settings;
     }
 
     public static Builder builder(String namespace) {
@@ -83,6 +91,7 @@ public final class BedrockAssetIndex {
         private final Map<String, AnimationRef> animations = new LinkedHashMap<>();
         private final Map<String, AnimationControllerDefinition> controllers = new LinkedHashMap<>();
         private final Map<String, ClientEntityDefinition> entities = new LinkedHashMap<>();
+        private PackSettings settings = PackSettings.NONE;
 
         private Builder(String namespace) {
             this.namespace = namespace;
@@ -101,6 +110,11 @@ public final class BedrockAssetIndex {
 
         public Builder controller(AnimationControllerDefinition controller) {
             this.controllers.put(controller.id(), controller);
+            return this;
+        }
+
+        public Builder settings(PackSettings settings) {
+            this.settings = settings;
             return this;
         }
 

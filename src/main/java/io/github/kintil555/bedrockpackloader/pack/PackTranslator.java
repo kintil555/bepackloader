@@ -48,9 +48,13 @@ public final class PackTranslator {
     }
 
     public TranslatedPack translate(BedrockPackFiles files, String namespace) {
+        return translate(files, namespace, PackSettings.NONE);
+    }
+
+    public TranslatedPack translate(BedrockPackFiles files, String namespace, PackSettings settings) {
         TranslationReport report = new TranslationReport();
         VirtualResources resources = new VirtualResources();
-        BedrockAssetIndex.Builder index = BedrockAssetIndex.builder(namespace);
+        BedrockAssetIndex.Builder index = BedrockAssetIndex.builder(namespace).settings(settings);
         Map<String, String> geometryPathOwners = new HashMap<>();
 
         FlipbookIndex flipbooks = loadFlipbooks(files, report);

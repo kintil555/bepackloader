@@ -67,7 +67,7 @@ public final class BedrockPackRepositorySource implements RepositorySource {
                 try {
                     long start = System.nanoTime();
                     BedrockPackFiles files = BedrockPackFiles.build(this.root, subpack);
-                    TranslatedPack translated = new PackTranslator(mapper).translate(files, "bedrock_" + this.slug);
+                    TranslatedPack translated = new PackTranslator(mapper).translate(files, "bedrock_" + this.slug, PackSettings.fromManifest(this.manifest));
                     BedrockPackLoaderMod.LOGGER.info("Translated Bedrock pack '{}'{} in {} ms: {}", this.displayName,
                             subpack == null ? "" : " [" + subpack + "]", (System.nanoTime() - start) / 1_000_000,
                             translated.report().summary());
