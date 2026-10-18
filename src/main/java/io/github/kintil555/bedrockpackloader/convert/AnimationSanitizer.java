@@ -21,6 +21,7 @@ import java.util.regex.Pattern;
 public final class AnimationSanitizer {
     /** The character set GeckoLib accepts in an expression ({@code MathParser.EXPRESSION_FORMAT}). */
     private static final Pattern GECKOLIB_FORMAT = Pattern.compile("^[\\w\\s_+\\-/*%^&|<>=!?:;.,(){}]+$");
+    private static final Pattern MOD_CALL = Pattern.compile("\\bmod\\s*\\(", Pattern.CASE_INSENSITIVE);
     private static final List<String> CHANNELS = List.of("rotation", "position", "scale");
     private static final Set<String> VALUE_KEYS = Set.of("pre", "post", "vector", "easing_args");
 
@@ -39,7 +40,9 @@ public final class AnimationSanitizer {
 
     /** True when GeckoLib would not compile {@code expression} correctly. */
     public static boolean needsRewrite(String expression) {
-        return !GECKOLIB_FORMAT.matcher(expression).matches() || expression.contains("??") || expression.contains("->");
+        // GeckoLib 5.5.5 builds math.mod(a, b) with a null modulus and throws, which drops the whole animation file.
+        return !GECKOLIB_FORMAT.matcher(expression).matches() || expression.contains("??") || expression.contains("->")
+                || MOD_CALL.matcher(expression).find();
     }
 
     /** Sanitises, in place, every bone channel of every animation in an animation file. */
@@ -180,7 +183,9 @@ public final class AnimationSanitizer {
         if (element.isJsonArray()) {
             JsonArray array = element.getAsJsonArray();
             for (int i = 0; i < array.size(); i++) {
-                array.set(i, convert(array.get(i)));
+                // A vector component written as an object (e.g. {"y": "180-this"}) is invalid in Bedrock and makes
+                // GeckoLib drop the whole file; it evaluates to 0.
+                array.set(i, array.get(i).isJsonObject() ? new JsonPrimitive(0) : convert(array.get(i)));
             }
             return array;
         }

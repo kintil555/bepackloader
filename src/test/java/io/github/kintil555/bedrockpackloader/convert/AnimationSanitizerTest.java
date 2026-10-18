@@ -61,6 +61,20 @@ class AnimationSanitizerTest {
         assertTrue(AnimationSanitizer.needsRewrite("q.a('x')"));
         assertTrue(AnimationSanitizer.needsRewrite("array.x[0]"));
         assertFalse(AnimationSanitizer.needsRewrite("math.sin(q.anim_time*90)"));
+        assertTrue(AnimationSanitizer.needsRewrite("1.1+Math.mod(q.life_time,1.5)*0.125"));
+    }
+
+    @Test
+    void objectVectorComponentBecomesZero() {
+        JsonObject file = parse("""
+                {"animations":{"a":{"bones":{"b":{"rotation":[{"y":"180-this"},{"x":"q.t"},5]}}}}}""");
+        sanitizer(new ArrayList<>()).sanitize(file);
+
+        var rotation = file.getAsJsonObject("animations").getAsJsonObject("a").getAsJsonObject("bones")
+                .getAsJsonObject("b").getAsJsonArray("rotation");
+        assertEquals(0, rotation.get(0).getAsInt());
+        assertEquals(0, rotation.get(1).getAsInt());
+        assertEquals(5, rotation.get(2).getAsInt());
     }
 
     @Test
