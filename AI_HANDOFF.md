@@ -14,6 +14,8 @@ Last updated: 2026-10-18 (milestone 0.6.0-dev: Molang evaluator added, roughly 5
 - Minecraft 26.2 is unobfuscated (Mojang names, no Yarn/mappings). Decompile with **Vineflower** (1.12.0). Do not spend time on irrelevant code.
 - No placeholder code, no TODO comments. Prefer minimal edits (`str_replace`) over rewrites for small changes.
 - Never commit Bedrock packs (third-party content). `.gitignore` already blocks them.
+- **Do not build locally.** CI (GitHub Actions) builds; read its result/logs from the user. Local work = pure-Java checks only.
+- The user uploads the sample pack (`pack_name.zip`, Oreville "Actions & Stuff") and the GeckoLib jar at the start of a session; they are not in the repo. Pushing needs a GitHub token that the user pastes in chat per session: never store it (not in git config, files or notes) and remind the user to revoke it.
 
 ## 1. Goal
 
@@ -92,12 +94,12 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 - Alias tables are data (`mappings/block_aliases.json`, `item_aliases.json`: `exact` + `families` with `{wood}`, `{color}`, `{tier}` placeholders). Extend the JSON, not the code.
 - `vanilla_textures.txt` (`path width height`) was generated from the 26.2 client jar; regenerate when the target MC version changes.
 
-## 5. NEXT (remaining ~50%), suggested order
+## 5. NEXT (remaining ~45%), suggested order
 
-1. **Run reality checks first** (cheap, highest value): `gradle build`; translate the test pack in a harness and read `TranslationReport`; launch the client and check the pack list. Fix whatever breaks.
-2. Unit tests in `src/test/java` (BrArchive with a synthetic archive, TextureMapper, TgaDecoder, GeometrySplitter, controller parsing). Do not use real pack content.
+1. **Check the first CI run** of `.github/workflows/build.yml` (never confirmed yet; Loom 1.15.2, Fabric API 0.157.0+26.2 and loader 0.19.3 are copied from MinimalsClient). Fix compile errors the sandbox could not see (the main code was only checked with javac against stubs). Then: translate the test pack in a harness and read `TranslationReport`; launch the client and check the pack list.
+2. More unit tests in `src/test/java` (only `molang/MolangTest` exists). Missing: BrArchive with a synthetic archive, TextureMapper, TgaDecoder, GeometrySplitter, controller parsing. Do not use real pack content.
 3. **Entity binding** (next; Molang is ready to be used for `scripts.*`, controllers and render controllers; GeckoLib 5.5.5 facts: `GeoReplacedEntityRenderer<T extends GeoAnimatable, E extends Entity, R extends EntityRenderState>(Context, GeoModel<T>, T animatable)`, `GeoModel` needs `getModelResource(GeoRenderState)`, `getTextureResource(GeoRenderState)`, `getAnimationResource(T)`; animatable must implement `GeoReplacedEntity` (singleton, not an Entity); player renderer in MC 26.2 is `net.minecraft.client.renderer.entity.player.AvatarRenderer`, entity class `net.minecraft.world.entity.Avatar`; renderers are built at resource reload from `EntityRenderers` providers, so a provider must delegate to the vanilla renderer when no Bedrock definition applies): map `ClientEntityDefinition` (geometry/texture/animation short names) to a GeckoLib renderer for the matching vanilla entity type. Check how GeckoLib 5 renderers are built (decompile `com.geckolib.renderer`, `com.geckolib.model`), then the player first (see `actionandstuffport` for known player animation pitfalls).
-4. **Animation controller playback**: translate `AnimationControllerDefinition` (states, transitions, blend, on_entry/on_exit) to GeckoLib animation controllers; evaluate Molang via GeckoLib's `MathParser` (`com.geckolib.loading.math`); implement the `q.*` / `v.*` query set used by the pack.
+4. **Animation controller playback**: translate `AnimationControllerDefinition` (states, transitions, blend, on_entry/on_exit) to GeckoLib animation controllers; evaluate Molang with our own `molang/` package (**not** GeckoLib's `MathParser`, it rejects strings and `??`); keyframe expressions inside animation JSON also contain Molang that GeckoLib itself will try to parse, so sanitise or pre-evaluate them (not investigated yet); implement the `q.*` / `v.*` query set used by the pack.
 5. Render controllers (`render_controllers`), attachables (held/armor items), particles, sounds (`sounds.json` / `sound_definitions.json`), UI textures, PBR (`_mer`/`_normal`) if shaders allow.
 6. Extend alias tables to raise vanilla coverage; consider `terrain_texture.json` / `item_texture.json` for authoritative names.
 7. Optional: legacy 1.8.0 geometry conversion, in-game pack settings (Bedrock `settings` in manifest are currently ignored).
@@ -108,15 +110,20 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 - Static `@ModifyVariable` on `PackRepository.<init>` (argsOnly, HEAD) applies correctly under Fabric's Mixin.
 - GeckoLib accepts geo version `1.21.0` for files that were `1.26.10`.
 - `FolderRepositorySource` ignores Bedrock zips in `resourcepacks/` without breaking (it may log a warning).
+- Molang array index out of range is clamped (Bedrock behaviour not verified). `a->b` returns 0.
+- `BedrockPackRoot.ZipRoot` prefix handling for the test zip (single top-level folder `pack.name/`) has not been run.
+- GeckoLib parses Molang inside animation JSON itself and will throw/skip on strings, `??`, `[ ]`: how it fails (whole file or single keyframe) is unknown.
 - Gson in MC 26.2 treats `JsonParser.parseReader` as lenient (comments in Bedrock JSON). True for 2.10 and 2.11+ by documentation, not run.
 
 ## 7. Sandbox tips (if working in a restricted environment)
 
-- Reachable: github.com, api.github.com (rate-limited), raw/release assets, npm, PyPI, Ubuntu apt. **Not reachable:** maven.fabricmc.net, Maven Central, libraries.minecraft.net.
+- Reachable: github.com, api.github.com (rate-limited), raw/release assets, npm, PyPI, Ubuntu apt (run `apt-get update` first, else 404). **Not reachable:** maven.fabricmc.net, Maven Central, libraries.minecraft.net, api.modrinth.com.
 - MC 26.2 jar for reference: repo `kintil555/mc-version-jar`, branch `26.2-fabric` (file `26_2-0_19_5.jar`, client jar, ~39 MB).
-- Compile-check without Gradle: JDK 25 via apt (`openjdk-25-jdk-headless`), classpath = MC jar + nested jars of Fabric API (from GitHub release `0.161.0+26.2`) + apt libs (gson, guava, slf4j, fastutil) + hand-written stubs for fabric-loader, Mixin annotations, jspecify, `com.mojang.logging.LogUtils`, `com.mojang.brigadier.Message`.
+- Compile-check without Gradle: JDK 25 via apt (`openjdk-25-jdk-headless`), classpath = MC jar + nested jars of Fabric API (from the GitHub release of the Fabric API version in `gradle.properties`) + apt libs (gson, guava, slf4j, fastutil) + hand-written stubs for fabric-loader, Mixin annotations, jspecify, `com.mojang.logging.LogUtils`, `com.mojang.brigadier.Message`.
 - Running code that touches `Identifier` needs DFU (missing): use a stub with the same validation rules (`[a-z0-9_.-]` namespace, `[a-z0-9/._-]` path).
-- Vineflower: `java -jar vineflower-1.12.0.jar -e=<library jar> <input dir> <output dir>`.
+- Vineflower: `java -jar vineflower-1.12.0.jar -e=<library jar> <input dir> <output dir>` (runs fine on JDK 21; decompile only `com/geckolib/{renderer,model,animation,animatable,loading/math,event}`, 135 files, a few seconds).
+- Running the Molang tests without Gradle: compile `molang/*.java` + `MolangTest.java` with a 2-class stub of `org.junit.jupiter.api.{Test,Assertions}` and a reflective runner; JDK 25 (`javac --release 25`).
+- Reading the test pack: a 20-line Python reader for `.brarchive` (format in section 3) extracts everything; entity/animation/controller/render-controller JSON files have obfuscated names, search by content.
 
 ## 8. Update protocol
 
