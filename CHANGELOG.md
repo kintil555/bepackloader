@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Fix animations/models rejected by GeckoLib (seen in the log: 5 of 14 animation files and ~560 of 3,000 models failed to load): `relative_to` objects become strings; effect arrays at one timestamp are spread over nearby timestamps; timeline statement arrays are joined with `;`; bones whose parent lives in another geometry become top-level; cubes without `uv` get `[0,0]`. Checked with the real GeckoLib 5.5.5 deserializers on the test pack: 13 of 14 animation files load (the 5.7 MB one could not be run in the sandbox, missing DFU classes).
+- Add built-in Bedrock geometries `geometry.humanoid`, `.humanoid.custom`, `.humanoid.customSlim`, `geometry.cape` (`BuiltinGeometry`): the pack's `minecraft:player` references them without defining them, which made the player binding fail ("geometry or animations cannot be resolved").
 - Fix: textures/animations were empty in game ("PNG header missing", 0 textures mapped). Real packs ship zero-length `.brarchive` stub entries next to the loose files; they replaced the real files. `BedrockPackFiles.expand` now skips zero-length entries. Test `BedrockPackFilesTest`.
 - Fix: `.tga` files that actually contain PNG data (65 in the test pack) are passed through; type is detected from content, not extension.
 - Title screen: "?" button in the first free slot right of the small icon row (late Fabric phase, avoids Mod Menu's button) opens `BedrockHelpScreen` (accepted formats, folders, how to enable; en_us and id_id).

@@ -48,6 +48,9 @@ public final class AnimationSanitizer {
             return;
         }
         for (Map.Entry<String, JsonElement> animation : file.getAsJsonObject("animations").entrySet()) {
+            if (animation.getValue().isJsonObject()) {
+                sanitizeEffects(animation.getValue().getAsJsonObject());
+            }
             if (!animation.getValue().isJsonObject() || !animation.getValue().getAsJsonObject().has("bones")
                     || !animation.getValue().getAsJsonObject().get("bones").isJsonObject()) {
                 continue;
@@ -60,7 +63,85 @@ public final class AnimationSanitizer {
         }
     }
 
+    /**
+     * Bedrock allows several effects, or several timeline statements, at one timestamp (a JSON array); GeckoLib only
+     * accepts one per timestamp and drops the whole file otherwise. Extra effects move to a slightly later timestamp,
+     * extra statements are joined with {@code ;}.
+     */
+    private void sanitizeEffects(JsonObject animation) {
+        for (String key : List.of("particle_effects", "sound_effects")) {
+            if (!animation.has(key) || !animation.get(key).isJsonObject()) {
+                continue;
+            }
+            JsonObject effects = animation.getAsJsonObject(key);
+            JsonObject result = new JsonObject();
+            for (Map.Entry<String, JsonElement> entry : effects.entrySet()) {
+                if (!entry.getValue().isJsonArray()) {
+                    result.add(entry.getKey(), entry.getValue());
+                    continue;
+                }
+                this.replaced++;
+                double time = parseTime(entry.getKey());
+                int index = 0;
+                for (JsonElement effect : entry.getValue().getAsJsonArray()) {
+                    String name = index == 0 ? entry.getKey() : Double.toString(Math.round((time + index * 0.001) * 10000.0) / 10000.0);
+                    if (effect.isJsonObject() && !result.has(name)) {
+                        result.add(name, effect);
+                        index++;
+                    }
+                }
+            }
+            animation.add(key, result);
+        }
+
+        if (animation.has("timeline") && animation.get("timeline").isJsonObject()) {
+            JsonObject timeline = animation.getAsJsonObject("timeline");
+            for (Map.Entry<String, JsonElement> entry : timeline.entrySet()) {
+                if (entry.getValue().isJsonArray()) {
+                    StringBuilder joined = new StringBuilder();
+                    for (JsonElement statement : entry.getValue().getAsJsonArray()) {
+                        if (statement.isJsonPrimitive()) {
+                            joined.append(statement.getAsString().strip());
+                            if (!joined.toString().endsWith(";")) {
+                                joined.append(';');
+                            }
+                        }
+                    }
+                    timeline.addProperty(entry.getKey(), joined.toString());
+                    this.replaced++;
+                }
+            }
+        }
+    }
+
+    private static double parseTime(String key) {
+        try {
+            return Double.parseDouble(key);
+        } catch (NumberFormatException ex) {
+            return 0.0;
+        }
+    }
+
     private void sanitizeBone(JsonObject bone) {
+        // Bedrock 1.10+ writes "relative_to": {"rotation": "entity"}; GeckoLib only accepts a string and drops the file otherwise.
+        JsonElement relativeTo = bone.get("relative_to");
+        if (relativeTo != null && !relativeTo.isJsonPrimitive()) {
+            String value = null;
+            if (relativeTo.isJsonObject()) {
+                for (Map.Entry<String, JsonElement> entry : relativeTo.getAsJsonObject().entrySet()) {
+                    if (entry.getValue().isJsonPrimitive()) {
+                        value = entry.getValue().getAsString();
+                        break;
+                    }
+                }
+            }
+            if (value == null) {
+                bone.remove("relative_to");
+            } else {
+                bone.addProperty("relative_to", value);
+            }
+            this.replaced++;
+        }
         for (String channel : CHANNELS) {
             JsonElement value = bone.get(channel);
             if (value == null) {

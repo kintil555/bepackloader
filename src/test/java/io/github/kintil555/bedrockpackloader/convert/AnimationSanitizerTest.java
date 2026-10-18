@@ -62,4 +62,23 @@ class AnimationSanitizerTest {
         assertTrue(AnimationSanitizer.needsRewrite("array.x[0]"));
         assertFalse(AnimationSanitizer.needsRewrite("math.sin(q.anim_time*90)"));
     }
+
+    @Test
+    void flattensObjectRelativeToAndEffectArrays() {
+        JsonObject file = parse("""
+                {"animations":{"a":{
+                  "bones":{"b":{"relative_to":{"rotation":"entity"},"rotation":[1,2,3]}},
+                  "particle_effects":{"0.5":[{"effect":"x"},{"effect":"y"}],"1.0":{"effect":"z"}},
+                  "timeline":{"0.0":["v.a=1","v.b=2"]}
+                }}}""");
+        sanitizer(new ArrayList<>()).sanitize(file);
+
+        JsonObject animation = file.getAsJsonObject("animations").getAsJsonObject("a");
+        assertEquals("entity", animation.getAsJsonObject("bones").getAsJsonObject("b").get("relative_to").getAsString());
+        JsonObject particles = animation.getAsJsonObject("particle_effects");
+        assertEquals(3, particles.size());
+        assertEquals("x", particles.getAsJsonObject("0.5").get("effect").getAsString());
+        assertEquals("y", particles.getAsJsonObject("0.501").get("effect").getAsString());
+        assertEquals("v.a=1;v.b=2;", animation.getAsJsonObject("timeline").get("0.0").getAsString());
+    }
 }

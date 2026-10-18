@@ -5,8 +5,10 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * GeckoLib bakes only the first geometry of a file, while Bedrock files routinely hold many. This splits a
@@ -39,6 +41,7 @@ public final class GeometrySplitter {
                 continue;
             }
 
+            repairBones(element.getAsJsonObject());
             JsonArray single = new JsonArray(1);
             single.add(element);
             JsonObject document = new JsonObject();
@@ -48,6 +51,43 @@ public final class GeometrySplitter {
                     !version.equals(originalVersion)));
         }
         return parts;
+    }
+
+    /**
+     * Makes a geometry loadable by GeckoLib, which is stricter than Bedrock: a bone whose parent is not defined in the
+     * same geometry (attachment models extend bones of another model) becomes a top-level bone, and cubes without
+     * {@code uv} get the origin of the texture.
+     */
+    static void repairBones(JsonObject geometry) {
+        if (!geometry.has("bones") || !geometry.get("bones").isJsonArray()) {
+            return;
+        }
+        JsonArray bones = geometry.getAsJsonArray("bones");
+        Set<String> names = new HashSet<>();
+        for (JsonElement bone : bones) {
+            if (bone.isJsonObject() && bone.getAsJsonObject().has("name")) {
+                names.add(bone.getAsJsonObject().get("name").getAsString());
+            }
+        }
+        for (JsonElement element : bones) {
+            if (!element.isJsonObject()) {
+                continue;
+            }
+            JsonObject bone = element.getAsJsonObject();
+            if (bone.has("parent") && !names.contains(bone.get("parent").getAsString())) {
+                bone.remove("parent");
+            }
+            if (bone.has("cubes") && bone.get("cubes").isJsonArray()) {
+                for (JsonElement cube : bone.getAsJsonArray("cubes")) {
+                    if (cube.isJsonObject() && !cube.getAsJsonObject().has("uv")) {
+                        JsonArray uv = new JsonArray(2);
+                        uv.add(0);
+                        uv.add(0);
+                        cube.getAsJsonObject().add("uv", uv);
+                    }
+                }
+            }
+        }
     }
 
     private static Optional<String> identifierOf(JsonElement geometry) {

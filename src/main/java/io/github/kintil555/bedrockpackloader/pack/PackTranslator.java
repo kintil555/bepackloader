@@ -3,6 +3,7 @@ package io.github.kintil555.bedrockpackloader.pack;
 import com.google.gson.JsonObject;
 import io.github.kintil555.bedrockpackloader.animation.MolangVariableBridge;
 import io.github.kintil555.bedrockpackloader.convert.AnimationSanitizer;
+import io.github.kintil555.bedrockpackloader.convert.BuiltinGeometry;
 import io.github.kintil555.bedrockpackloader.convert.FlipbookIndex;
 import io.github.kintil555.bedrockpackloader.convert.GeometrySplitter;
 import io.github.kintil555.bedrockpackloader.convert.PngEncoder;
@@ -85,7 +86,23 @@ public final class PackTranslator {
             }
         }
 
+        addBuiltinGeometries(namespace, resources, index, report);
         return new TranslatedPack(namespace, resources, index.build(), report);
+    }
+
+    /** Adds Bedrock's built-in geometries (the default player model, cape) that the pack references but does not define. */
+    private static void addBuiltinGeometries(String namespace, VirtualResources resources, BedrockAssetIndex.Builder index,
+                                             TranslationReport report) {
+        BuiltinGeometry.all().forEach((identifier, json) -> {
+            if (index.hasGeometry(identifier)) {
+                return;
+            }
+            String name = "builtin_" + PathNames.toIdentifierPath(identifier.substring("geometry.".length())).replace('/', '_');
+            if (resources.putBytes(namespace, GECKOLIB_MODELS + name + ".geo.json", json)) {
+                index.geometry(identifier, Identifier.fromNamespaceAndPath(namespace, name));
+                report.geometries++;
+            }
+        });
     }
 
     private static FlipbookIndex loadFlipbooks(BedrockPackFiles files, TranslationReport report) {

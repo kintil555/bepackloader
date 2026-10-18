@@ -113,6 +113,10 @@ public final class BedrockAssetIndex {
             return this;
         }
 
+        public boolean hasGeometry(String geometryId) {
+            return this.geometry.containsKey(geometryId);
+        }
+
         public Builder animation(String animationId, AnimationRef ref) {
             this.animations.put(animationId, ref);
             return this;
