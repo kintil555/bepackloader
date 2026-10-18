@@ -14,7 +14,12 @@ import org.jspecify.annotations.Nullable;
  * geometry, the one that picks the texture, and the arrays those expressions index. Materials, part visibility and
  * colours are not supported.
  */
-public record RenderControllerDefinition(String id, String geometry, @Nullable String texture, Map<String, List<Object>> arrays) {
+public record RenderControllerDefinition(String id, String geometry, @Nullable String texture, Map<String, List<Object>> arrays,
+                                         List<PartRule> partVisibility) {
+    /** A {@code part_visibility} entry: bone name pattern ({@code *} wildcards) and a Molang condition ({@code "1"}/{@code "0"} for literals). */
+    public record PartRule(String pattern, String condition) {
+    }
+
     /** Parses all controllers of a {@code render_controllers} file; entries without geometry are skipped. */
     public static List<RenderControllerDefinition> parseFile(JsonObject root) {
         List<RenderControllerDefinition> result = new ArrayList<>();
@@ -34,9 +39,30 @@ public record RenderControllerDefinition(String id, String geometry, @Nullable S
                     && !controller.getAsJsonArray("textures").isEmpty() && controller.getAsJsonArray("textures").get(0).isJsonPrimitive()) {
                 texture = controller.getAsJsonArray("textures").get(0).getAsString();
             }
-            result.add(new RenderControllerDefinition(entry.getKey(), controller.get("geometry").getAsString(), texture, arrays(controller)));
+            result.add(new RenderControllerDefinition(entry.getKey(), controller.get("geometry").getAsString(), texture, arrays(controller),
+                    partVisibility(controller)));
         }
         return result;
+    }
+
+    private static List<PartRule> partVisibility(JsonObject controller) {
+        List<PartRule> rules = new ArrayList<>();
+        if (controller.has("part_visibility") && controller.get("part_visibility").isJsonArray()) {
+            for (JsonElement element : controller.getAsJsonArray("part_visibility")) {
+                if (!element.isJsonObject()) {
+                    continue;
+                }
+                for (Map.Entry<String, JsonElement> rule : element.getAsJsonObject().entrySet()) {
+                    JsonElement value = rule.getValue();
+                    if (!value.isJsonPrimitive()) {
+                        continue;
+                    }
+                    String condition = value.getAsJsonPrimitive().isBoolean() ? (value.getAsBoolean() ? "1" : "0") : value.getAsString();
+                    rules.add(new PartRule(rule.getKey().toLowerCase(Locale.ROOT), condition));
+                }
+            }
+        }
+        return List.copyOf(rules);
     }
 
     private static Map<String, List<Object>> arrays(JsonObject controller) {

@@ -52,4 +52,18 @@ class RenderControllerDefinitionTest {
         assertEquals("geometry.cape", MolangExpression.compile(controller.geometry()).evaluate(scope));
         assertEquals("texture.cape", MolangExpression.compile(controller.texture()).evaluate(scope));
     }
+
+    @Test
+    void parsesPartVisibilityInOrder() {
+        String file = """
+                {"render_controllers":{"controller.render.p":{"geometry":"Geometry.default","textures":["Texture.default"],
+                  "part_visibility":[{"*":true},{"Helmet":"v.helmet"},{"boots*":false}]}}}""";
+        RenderControllerDefinition controller = RenderControllerDefinition.parseFile(JsonParser.parseString(file).getAsJsonObject()).get(0);
+
+        assertEquals(3, controller.partVisibility().size());
+        assertEquals("1", controller.partVisibility().get(0).condition());
+        assertEquals("helmet", controller.partVisibility().get(1).pattern());
+        assertEquals("v.helmet", controller.partVisibility().get(1).condition());
+        assertEquals("0", controller.partVisibility().get(2).condition());
+    }
 }

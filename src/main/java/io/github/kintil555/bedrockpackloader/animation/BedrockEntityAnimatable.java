@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -102,9 +103,24 @@ public final class BedrockEntityAnimatable implements GeoReplacedEntity {
             if (texture == null && skin == null) {
                 continue;
             }
-            passes.add(new RenderPass(model, texture));
+            List<RenderPass.Rule> rules = new ArrayList<>();
+            for (RenderControllerDefinition.PartRule rule : controller.partVisibility()) {
+                rules.add(new RenderPass.Rule(wildcard(rule.pattern()), runtime.test(rule.condition())));
+            }
+            passes.add(new RenderPass(model, texture, List.copyOf(rules)));
         }
         return any ? passes : null;
+    }
+
+    private static Pattern wildcard(String pattern) {
+        StringBuilder regex = new StringBuilder();
+        for (String part : pattern.split("\\*", -1)) {
+            if (regex.length() > 0 || pattern.startsWith("*")) {
+                regex.append(".*");
+            }
+            regex.append(Pattern.quote(part));
+        }
+        return Pattern.compile(regex.toString(), Pattern.CASE_INSENSITIVE);
     }
 
     private static @Nullable String key(@Nullable String value, String prefix) {

@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.kintil555.bedrockpackloader.animation.BedrockDataTickets;
 import io.github.kintil555.bedrockpackloader.animation.BedrockEntityAnimatable;
 import io.github.kintil555.bedrockpackloader.animation.BedrockEntityBinding;
+import io.github.kintil555.bedrockpackloader.animation.BedrockPassRenderer;
 import io.github.kintil555.bedrockpackloader.animation.RenderPass;
 import java.util.List;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -44,7 +45,7 @@ public abstract class LivingEntityRendererMixin {
         } else {
             for (RenderPass pass : passes) {
                 ((GeoRenderState) (Object) state).addGeckolibData(BedrockDataTickets.PASS, pass);
-                renderer.submit(avatarState, poseStack, collector, camera);
+                BedrockPassRenderer.draw(renderer, avatarState, poseStack, collector, camera, pass);
             }
         }
         ci.cancel();

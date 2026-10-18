@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Render controller `part_visibility` (bone patterns with wildcards, Molang conditions) applied per pass.
 - Render controllers: parse `render_controllers/`, evaluate geometry/texture selection (arrays, conditions) and draw one pass per active controller for the player.
 - Controller timing queries (`state_time`, `anim_time`, `any_animation_finished`) and more entity queries (move speed, position, name, held item and item tag).
 - Wire the Bedrock player into rendering: mixins on `EntityRenderers.createAvatarRenderers`, `AvatarRenderer.extractRenderState` and `LivingEntityRenderer.submit` delegate to a lazily built GeckoLib renderer (`BedrockEntityBinding`); Molang scope provider installed; binding reset on resource reload.
