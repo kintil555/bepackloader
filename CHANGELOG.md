@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Held items: `BedrockHeldItemLayer` draws main/off-hand items on the Bedrock player through the bones `rightItem` / `leftItem` (bones missing from the model are skipped).
 - Render controller `part_visibility` (bone patterns with wildcards, Molang conditions) applied per pass.
 - Render controllers: parse `render_controllers/`, evaluate geometry/texture selection (arrays, conditions) and draw one pass per active controller for the player.
 - Controller timing queries (`state_time`, `anim_time`, `any_animation_finished`) and more entity queries (move speed, position, name, held item and item tag).

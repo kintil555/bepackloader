@@ -2,6 +2,7 @@ package io.github.kintil555.bedrockpackloader.animation;
 
 import com.geckolib.animation.state.ControllerState;
 import com.geckolib.renderer.GeoReplacedEntityRenderer;
+import com.geckolib.renderer.base.GeoRenderer;
 import io.github.kintil555.bedrockpackloader.BedrockPackLoaderMod;
 import io.github.kintil555.bedrockpackloader.BedrockPackRegistry;
 import io.github.kintil555.bedrockpackloader.index.BedrockAssetIndex;
@@ -67,6 +68,12 @@ public final class BedrockEntityBinding {
         return current.renderer();
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static void addHeldItemLayer(GeoReplacedEntityRenderer<BedrockEntityAnimatable, Avatar, AvatarRenderState> renderer,
+                                         EntityRendererProvider.Context ctx) {
+        ((GeoReplacedEntityRenderer) renderer).withRenderLayer(new BedrockHeldItemLayer(ctx, (GeoRenderer) renderer));
+    }
+
     private static @Nullable GeoReplacedEntityRenderer<BedrockEntityAnimatable, Avatar, AvatarRenderState> createPlayerRenderer(
             EntityRendererProvider.Context ctx) {
         List<BedrockAssetIndex> indices = BedrockPackRegistry.INSTANCE.activeIndices();
@@ -83,7 +90,10 @@ public final class BedrockEntityBinding {
                 continue;
             }
             BedrockPackLoaderMod.LOGGER.info("Bedrock pack '{}' now renders the player", index.namespace());
-            return new GeoReplacedEntityRenderer<>(ctx, model.get(), new BedrockEntityAnimatable(definition.get(), index));
+            GeoReplacedEntityRenderer<BedrockEntityAnimatable, Avatar, AvatarRenderState> renderer =
+                    new GeoReplacedEntityRenderer<>(ctx, model.get(), new BedrockEntityAnimatable(definition.get(), index));
+            addHeldItemLayer(renderer, ctx);
+            return renderer;
         }
         return null;
     }
