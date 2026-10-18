@@ -6,7 +6,7 @@
   "description": "Use Minecraft Bedrock resource packs directly in Java Edition. Reads brarchive containers and translates Bedrock geometry and animations for GeckoLib.",
   "authors": ["kintil555"],
   "contact": {
-    "sources": "https://github.com/kintil555/bedrockpackloader"
+    "sources": "https://github.com/kintil555/bepackloader"
   },
   "license": "MIT",
   "environment": "client",
