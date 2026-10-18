@@ -6,6 +6,8 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.kintil555.bedrockpackloader.animation.BedrockDataTickets;
 import io.github.kintil555.bedrockpackloader.animation.BedrockEntityAnimatable;
 import io.github.kintil555.bedrockpackloader.animation.BedrockEntityBinding;
+import io.github.kintil555.bedrockpackloader.animation.RenderPass;
+import java.util.List;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
@@ -36,7 +38,15 @@ public abstract class LivingEntityRendererMixin {
         if (renderer == null) {
             return;
         }
-        renderer.submit(avatarState, poseStack, collector, camera);
+        List<RenderPass> passes = renderer.getAnimatable().renderPasses((GeoRenderState) (Object) state, avatarState.skin.body().texturePath());
+        if (passes == null) {
+            renderer.submit(avatarState, poseStack, collector, camera);
+        } else {
+            for (RenderPass pass : passes) {
+                ((GeoRenderState) (Object) state).addGeckolibData(BedrockDataTickets.PASS, pass);
+                renderer.submit(avatarState, poseStack, collector, camera);
+            }
+        }
         ci.cancel();
     }
 }

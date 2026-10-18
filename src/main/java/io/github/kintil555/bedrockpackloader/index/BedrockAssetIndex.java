@@ -15,13 +15,17 @@ import net.minecraft.resources.Identifier;
  */
 public final class BedrockAssetIndex {
     /** A GeckoLib animation: the animation file and the animation's name inside it. */
-    public record AnimationRef(Identifier file, String name) {
+    public record AnimationRef(Identifier file, String name, double length, boolean loops) {
+        public AnimationRef(Identifier file, String name) {
+            this(file, name, 0.0, false);
+        }
     }
 
     private final String namespace;
     private final Map<String, Identifier> geometry;
     private final Map<String, AnimationRef> animations;
     private final Map<String, AnimationControllerDefinition> controllers;
+    private final Map<String, RenderControllerDefinition> renderControllers;
     private final Map<String, ClientEntityDefinition> entities;
     private final PackSettings settings;
 
@@ -30,6 +34,7 @@ public final class BedrockAssetIndex {
         this.geometry = Map.copyOf(builder.geometry);
         this.animations = Map.copyOf(builder.animations);
         this.controllers = Map.copyOf(builder.controllers);
+        this.renderControllers = Map.copyOf(builder.renderControllers);
         this.entities = Map.copyOf(builder.entities);
         this.settings = builder.settings;
     }
@@ -55,6 +60,10 @@ public final class BedrockAssetIndex {
 
     public Optional<AnimationRef> animation(String animationId) {
         return Optional.ofNullable(this.animations.get(animationId));
+    }
+
+    public Optional<RenderControllerDefinition> renderController(String id) {
+        return Optional.ofNullable(this.renderControllers.get(id));
     }
 
     public Optional<AnimationControllerDefinition> controller(String controllerId) {
@@ -90,6 +99,7 @@ public final class BedrockAssetIndex {
         private final Map<String, Identifier> geometry = new LinkedHashMap<>();
         private final Map<String, AnimationRef> animations = new LinkedHashMap<>();
         private final Map<String, AnimationControllerDefinition> controllers = new LinkedHashMap<>();
+        private final Map<String, RenderControllerDefinition> renderControllers = new LinkedHashMap<>();
         private final Map<String, ClientEntityDefinition> entities = new LinkedHashMap<>();
         private PackSettings settings = PackSettings.NONE;
 
@@ -110,6 +120,11 @@ public final class BedrockAssetIndex {
 
         public Builder controller(AnimationControllerDefinition controller) {
             this.controllers.put(controller.id(), controller);
+            return this;
+        }
+
+        public Builder renderController(RenderControllerDefinition controller) {
+            this.renderControllers.put(controller.id(), controller);
             return this;
         }
 

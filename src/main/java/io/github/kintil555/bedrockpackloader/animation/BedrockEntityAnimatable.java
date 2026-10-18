@@ -8,11 +8,20 @@ import com.geckolib.animation.RawAnimation;
 import com.geckolib.animation.object.LoopType;
 import com.geckolib.animation.object.PlayState;
 import com.geckolib.animation.state.AnimationTest;
+import com.geckolib.renderer.base.GeoRenderState;
 import com.geckolib.util.GeckoLibUtil;
+import io.github.kintil555.bedrockpackloader.index.RenderControllerDefinition;
+import io.github.kintil555.bedrockpackloader.util.PathNames;
+import net.minecraft.resources.Identifier;
 import io.github.kintil555.bedrockpackloader.index.AnimationControllerDefinition;
 import io.github.kintil555.bedrockpackloader.index.BedrockAssetIndex;
 import io.github.kintil555.bedrockpackloader.index.ClientEntityDefinition;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The GeckoLib animatable of a Bedrock client entity. It registers one GeckoLib controller per {@code scripts.animate}
@@ -22,6 +31,7 @@ import java.util.Optional;
 public final class BedrockEntityAnimatable implements GeoReplacedEntity {
     private final ClientEntityDefinition definition;
     private final BedrockAssetIndex index;
+    private final Map<Integer, BedrockEntityRuntime> runtimes = new ConcurrentHashMap<>();
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this, true);
 
     public BedrockEntityAnimatable(ClientEntityDefinition definition, BedrockAssetIndex index) {
@@ -31,8 +41,6 @@ public final class BedrockEntityAnimatable implements GeoReplacedEntity {
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {
-        BedrockEntityRuntime runtime = new BedrockEntityRuntime(this.definition);
-
         for (ClientEntityDefinition.Animate entry : this.definition.animate()) {
             String id = this.definition.animations().get(entry.name());
             if (id == null) {
@@ -41,18 +49,70 @@ public final class BedrockEntityAnimatable implements GeoReplacedEntity {
 
             Optional<AnimationControllerDefinition> controller = this.index.controller(id);
             if (controller.isPresent()) {
-                ControllerMachine machine = new ControllerMachine(controller.get(), this.definition.animations()::get, BedrockEntityRuntime::compile);
+                ControllerMachine machine = new ControllerMachine(controller.get(), this.definition.animations()::get, BedrockEntityRuntime::compile, this::timing);
                 int slots = ControllerMachine.maxAnimations(controller.get());
                 for (int slot = 0; slot < slots; slot++) {
                     int index = slot;
                     registrar.add(new AnimationController<BedrockEntityAnimatable>("bpl_" + entry.name() + "_" + slot, 0,
-                            test -> playMachine(runtime, machine, entry, index, test)));
+                            test -> playMachine(runtime(test.renderState()), machine, entry, index, test)));
                 }
             } else if (this.index.animation(id).isPresent()) {
                 registrar.add(new AnimationController<BedrockEntityAnimatable>("bpl_" + entry.name(), 0,
-                        test -> playAnimation(runtime, id, entry, test)));
+                        test -> playAnimation(runtime(test.renderState()), id, entry, test)));
             }
         }
+    }
+
+    /** The Molang state of the entity that {@code renderState} belongs to, shared by all its controllers. */
+    public BedrockEntityRuntime runtime(GeoRenderState renderState) {
+        Integer id = renderState.getGeckolibData(BedrockDataTickets.ENTITY_ID);
+        return this.runtimes.computeIfAbsent(id == null ? -1 : id, key -> new BedrockEntityRuntime(this.definition));
+    }
+
+    /**
+     * The models to draw this frame, one per active render controller whose geometry resolves. Returns {@code null}
+     * when the entity defines no usable render controller (the caller then draws the default model once); an empty
+     * list means every controller is inactive.
+     */
+    public @Nullable List<RenderPass> renderPasses(GeoRenderState renderState, @Nullable Identifier skin) {
+        BedrockEntityRuntime runtime = runtime(renderState);
+        List<RenderPass> passes = new ArrayList<>();
+        boolean any = false;
+        for (ClientEntityDefinition.RenderControllerRef ref : this.definition.renderControllers()) {
+            RenderControllerDefinition controller = this.index.renderController(ref.id()).orElse(null);
+            if (controller == null) {
+                continue;
+            }
+            String geometryKey = key(runtime.evaluateString(controller.geometry(), controller.arrays()), "geometry.");
+            String geometryId = geometryKey == null ? null : this.definition.geometry().get(geometryKey);
+            Identifier model = geometryId == null ? null : this.index.geometry(geometryId).orElse(null);
+            if (model == null) {
+                continue;
+            }
+            any = true;
+            if (!runtime.test(ref.condition())) {
+                continue;
+            }
+            String textureKey = controller.texture() == null ? null : key(runtime.evaluateString(controller.texture(), controller.arrays()), "texture.");
+            Identifier texture = null;
+            if (textureKey != null && !textureKey.equals("default")) {
+                String path = this.definition.textures().get(textureKey);
+                texture = path == null ? null : Identifier.fromNamespaceAndPath(this.index.namespace(), PathNames.toIdentifierPath(path) + ".png");
+            }
+            if (texture == null && skin == null) {
+                continue;
+            }
+            passes.add(new RenderPass(model, texture));
+        }
+        return any ? passes : null;
+    }
+
+    private static @Nullable String key(@Nullable String value, String prefix) {
+        return value != null && value.startsWith(prefix) ? value.substring(prefix.length()) : null;
+    }
+
+    private ControllerMachine.@Nullable Timing timing(String animationId) {
+        return this.index.animation(animationId).map(ref -> new ControllerMachine.Timing(ref.length(), ref.loops())).orElse(null);
     }
 
     @Override

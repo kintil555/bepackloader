@@ -5,7 +5,7 @@
 > **Everything under "DONE" is finished. Do not re-implement or re-analyse it.** Start from "NEXT".
 > Humans may read it too, but it is written for AI. Update it at the end of every work session.
 
-Last updated: 2026-10-18 (milestone 0.7.0-dev: player entity binding wired via mixins, roughly 65% of the planned scope).
+Last updated: 2026-10-18 (milestone 0.8.0-dev: player binding + render controllers + controller timing/equipment queries, roughly 72% of the planned scope).
 
 ## 0. User preferences (apply these)
 
@@ -45,6 +45,9 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 | Entity runtime pieces (not wired in yet) | `pack/PackSettings` + `BedrockManifest.settings`, `animation/EntityQuerySnapshot` (queries), `ControllerMachine` (controller state machine), `BedrockEntityRuntime`, `BedrockEntityAnimatable`, `BedrockGeoModel`, `EntityQueryCapture`, `BedrockDataTickets` | `PackSettings`, `EntityQuerySnapshot`, `ControllerMachine`: **verified** by `ControllerMachineTest` (5 tests, plain javac + stub JUnit). The rest: compiled against the GeckoLib and MC 26.2 jars only. Nothing references them yet: no mixin, so no behaviour change in game. |
 
 | Player entity binding (wired) | `animation/BedrockEntityBinding`, `mixin/client/{EntityRenderersMixin,AvatarRendererMixin,LivingEntityRendererMixin}`, scope provider installed in `BedrockPackLoaderMod`, reset in `BedrockPackRegistry` | **Compiled** with javac 25 against the MC 26.2 and GeckoLib jars (0 errors, Mixin annotations stubbed). Mixin descriptors checked with `javap`. Not run in game: CI + launch needed. |
+
+| Render controllers (geometry/texture only) | `index/RenderControllerDefinition`, `animation/RenderPass`, `BedrockEntityAnimatable.renderPasses`, `BedrockGeoModel` (PASS ticket), multi-pass loop in `LivingEntityRendererMixin`, translator reads `render_controllers/` | `RenderControllerDefinitionTest` (2 tests, plain javac + stub JUnit) passes; rest compiled. One submit per active controller (layers: base, armor, cape...). **Unverified:** GeckoLib `performRenderPass` called several times on one render state. `v.is_first_person`/`map_face_icon`/`is_paperdoll` default 0. |
+| Controller timing + more queries | `ControllerTimes`, `ControllerMachine` (state_time, anim_time, any/all_animation(s)_finished from `animation_length`/`loop`), `EntityQuerySnapshot` (modified_move_speed, position, is_name_any, is_item_name_any, equipped_item_any_tag with tag aliases `is_sword`->`swords`..., graphics_mode_is_any = fancy, has_target/is_attached = 0) | `ControllerMachineTest` 7 tests pass. Item/tag capture compiled only. `anim_time` = state time (approximation). |
 
 ### NOT yet run anywhere
 - `gradle build` (sandbox cannot reach maven.fabricmc.net; **CI is `.github/workflows/build.yml` (JDK 25, `./gradlew build`, uploads jar + test reports), same layout as MinimalsClient. Let CI build, do not try locally.** Gradle wrapper 9.5.1 is committed.)
@@ -127,7 +130,7 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 
 ### Entity binding (player): state
 - Done: `EntityRenderers.createAvatarRenderers` HEAD captures the `Context`; `AvatarRenderer.extractRenderState` TAIL runs the Geo renderer's extraction and sets `BedrockDataTickets.ACTIVE`; `LivingEntityRenderer.submit` HEAD (cancellable) delegates to the Geo renderer when the state is an `AvatarRenderState` with `ACTIVE`. The renderer is lazy (`BedrockEntityBinding.playerRenderer()`), highest-priority pack with a resolvable `minecraft:player` wins, reset on resource reload. Only real `Player` entities (not mannequins).
-- Still to do: first-person hand/arm (`renderRightHand/LeftHand` untouched), render controllers (geometry/texture = `default`), attachables, other entity types (only the player is bound), blend weight expressions, unsupported queries (`modified_move_speed`, `target_*`, ...).
+- Still to do: first-person hand/arm (`renderRightHand/LeftHand` untouched), render controller materials/part_visibility/colours, attachables, other entity types (only the player is bound), blend weight expressions, queries still 0: `target_*`, `in_range`, `entity_biome_has_any_identifier`, `is_riding_any_entity_of_type`, `delta_time`.
 - Verify in game first: pack list shows the pack, log line `now renders the player`, no mixin apply errors (`defaultRequire: 1`), model visible, `variable.bpl_N` values non-zero.
 
 ## 6. Unverified assumptions (check these when something fails)

@@ -11,6 +11,7 @@ import io.github.kintil555.bedrockpackloader.convert.TgaDecoder;
 import io.github.kintil555.bedrockpackloader.index.AnimationControllerDefinition;
 import io.github.kintil555.bedrockpackloader.index.BedrockAssetIndex;
 import io.github.kintil555.bedrockpackloader.index.ClientEntityDefinition;
+import io.github.kintil555.bedrockpackloader.index.RenderControllerDefinition;
 import io.github.kintil555.bedrockpackloader.util.JsonIO;
 import io.github.kintil555.bedrockpackloader.util.PathNames;
 import java.io.ByteArrayInputStream;
@@ -70,6 +71,8 @@ public final class PackTranslator {
                     translateAnimations(files, path, namespace, resources, index, report);
                 } else if (path.startsWith("animation_controllers/") && path.endsWith(".json")) {
                     translateControllers(files, path, index, report);
+                } else if (path.startsWith("render_controllers/") && path.endsWith(".json")) {
+                    translateRenderControllers(files, path, index);
                 } else if (path.startsWith("entity/") && path.endsWith(".json")) {
                     translateEntity(files, path, index, report);
                 } else if (path.startsWith("texts/") && path.endsWith(".lang")) {
@@ -238,7 +241,12 @@ public final class PackTranslator {
         Identifier file = Identifier.fromNamespaceAndPath(namespace, stripped);
         report.animationFiles++;
         for (String animationId : root.getAsJsonObject("animations").keySet()) {
-            index.animation(animationId, new BedrockAssetIndex.AnimationRef(file, animationId));
+            JsonObject animation = root.getAsJsonObject("animations").get(animationId) instanceof JsonObject object ? object : new JsonObject();
+            double length = animation.has("animation_length") && animation.get("animation_length").isJsonPrimitive()
+                    && animation.get("animation_length").getAsJsonPrimitive().isNumber() ? animation.get("animation_length").getAsDouble() : 0.0;
+            boolean loops = animation.has("loop") && animation.get("loop").isJsonPrimitive()
+                    && animation.get("loop").getAsJsonPrimitive().isBoolean() && animation.get("loop").getAsBoolean();
+            index.animation(animationId, new BedrockAssetIndex.AnimationRef(file, animationId, length, loops));
             report.animations++;
         }
     }
@@ -252,6 +260,16 @@ public final class PackTranslator {
         for (AnimationControllerDefinition controller : AnimationControllerDefinition.parseFile(root)) {
             index.controller(controller);
             report.controllers++;
+        }
+    }
+
+    private void translateRenderControllers(BedrockPackFiles files, String path, BedrockAssetIndex.Builder index) throws IOException {
+        JsonObject root = JsonIO.parseObject(files.readBytes(path));
+        if (root == null) {
+            return;
+        }
+        for (RenderControllerDefinition controller : RenderControllerDefinition.parseFile(root)) {
+            index.renderController(controller);
         }
     }
 

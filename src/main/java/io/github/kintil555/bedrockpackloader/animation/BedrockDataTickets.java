@@ -12,6 +12,11 @@ public final class BedrockDataTickets {
     /** The Molang scope of the animated entity, read by {@code MolangVariableBridge} while sampling keyframes. */
     public static final DataTicket<MolangScope> SCOPE = DataTicket.create("bedrockpackloader_scope", MolangScope.class);
 
+    /** The id of the entity being rendered, used to find its {@link BedrockEntityRuntime}. */
+    public static final DataTicket<Integer> ENTITY_ID = DataTicket.create("bedrockpackloader_entity_id", Integer.class);
+    /** The render controller result being drawn; read by {@link BedrockGeoModel} to pick the model and texture. */
+    public static final DataTicket<RenderPass> PASS = DataTicket.create("bedrockpackloader_pass", RenderPass.class);
+
     private BedrockDataTickets() {
     }
 }

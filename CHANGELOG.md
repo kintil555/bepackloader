@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Render controllers: parse `render_controllers/`, evaluate geometry/texture selection (arrays, conditions) and draw one pass per active controller for the player.
+- Controller timing queries (`state_time`, `anim_time`, `any_animation_finished`) and more entity queries (move speed, position, name, held item and item tag).
 - Wire the Bedrock player into rendering: mixins on `EntityRenderers.createAvatarRenderers`, `AvatarRenderer.extractRenderState` and `LivingEntityRenderer.submit` delegate to a lazily built GeckoLib renderer (`BedrockEntityBinding`); Molang scope provider installed; binding reset on resource reload.
 - Add pack settings (manifest defaults for `q.is_pack_setting_*`), entity query snapshot, controller state machine and the GeckoLib animatable/model/runtime classes for entity binding (not wired in yet).
 - Sanitise Bedrock keyframe Molang that GeckoLib rejects (quotes, brackets, `??`): expressions become `variable.bpl_N` evaluated by the own Molang evaluator, so those animation files no longer fail to load. Tests in `AnimationSanitizerTest`.

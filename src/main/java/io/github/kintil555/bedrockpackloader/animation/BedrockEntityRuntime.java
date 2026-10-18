@@ -6,6 +6,7 @@ import io.github.kintil555.bedrockpackloader.index.ClientEntityDefinition;
 import io.github.kintil555.bedrockpackloader.molang.MolangContext;
 import io.github.kintil555.bedrockpackloader.molang.MolangExpression;
 import io.github.kintil555.bedrockpackloader.molang.MolangScope;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,6 +26,20 @@ public final class BedrockEntityRuntime {
 
     public BedrockEntityRuntime(ClientEntityDefinition definition) {
         this.definition = definition;
+        // Variables the Bedrock engine provides; the world render is always the third-person one.
+        this.scope.setVariable("is_first_person", 0.0);
+        this.scope.setVariable("map_face_icon", 0.0);
+        this.scope.setVariable("is_paperdoll", 0.0);
+    }
+
+    /** Evaluates {@code source} with {@code arrays} visible as {@code array.*} and returns its string result, or null. */
+    public @Nullable String evaluateString(String source, Map<String, List<Object>> arrays) {
+        this.context.arrays = arrays;
+        try {
+            return compile(source).evaluate(this.scope) instanceof String text ? text : null;
+        } finally {
+            this.context.arrays = Map.of();
+        }
     }
 
     /** Compiles a Molang source once for the whole game; invalid sources become the constant 0. */
@@ -69,13 +84,47 @@ public final class BedrockEntityRuntime {
         return condition == null || compile(condition).evaluateBoolean(this.scope);
     }
 
-    private static final class FrameContext implements MolangContext {
+    private static final class FrameContext implements MolangContext, ControllerTimes {
         private volatile @Nullable EntityQuerySnapshot snapshot;
+        private volatile Map<String, List<Object>> arrays = Map.of();
+        private volatile double stateTime;
+        private volatile double animTime;
+        private volatile boolean anyFinished;
+        private volatile boolean allFinished;
+
+        @Override
+        public void setControllerTimes(double stateTime, double animTime, boolean anyAnimationFinished, boolean allAnimationsFinished) {
+            this.stateTime = stateTime;
+            this.animTime = animTime;
+            this.anyFinished = anyAnimationFinished;
+            this.allFinished = allAnimationsFinished;
+        }
 
         @Override
         public @Nullable Object query(String name, Object[] args) {
+            switch (name) {
+                case "state_time" -> {
+                    return this.stateTime;
+                }
+                case "anim_time" -> {
+                    return this.animTime;
+                }
+                case "any_animation_finished" -> {
+                    return this.anyFinished ? 1.0 : 0.0;
+                }
+                case "all_animations_finished" -> {
+                    return this.allFinished ? 1.0 : 0.0;
+                }
+                default -> {
+                }
+            }
             EntityQuerySnapshot current = this.snapshot;
             return current == null ? null : current.query(name, args);
+        }
+
+        @Override
+        public @Nullable List<Object> array(String name) {
+            return this.arrays.get(name);
         }
 
         @Override

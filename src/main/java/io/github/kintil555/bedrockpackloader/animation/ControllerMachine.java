@@ -21,6 +21,8 @@ public final class ControllerMachine {
     private final AnimationControllerDefinition definition;
     private final Function<String, @Nullable String> animationIds;
     private final Function<String, MolangExpression> compiler;
+    private final Function<String, @Nullable Timing> timings;
+    private double stateEntry;
 
     private String state;
     private boolean started;
@@ -33,6 +35,17 @@ public final class ControllerMachine {
      */
     public ControllerMachine(AnimationControllerDefinition definition, Function<String, @Nullable String> animationIds,
                              Function<String, MolangExpression> compiler) {
+        this(definition, animationIds, compiler, id -> null);
+    }
+
+    /** Length and looping of an animation, used by {@code q.any_animation_finished}. */
+    public record Timing(double length, boolean loops) {
+    }
+
+    /** @param timings looks up the {@link Timing} of an animation id (null when unknown, then it never finishes) */
+    public ControllerMachine(AnimationControllerDefinition definition, Function<String, @Nullable String> animationIds,
+                             Function<String, MolangExpression> compiler, Function<String, @Nullable Timing> timings) {
+        this.timings = timings;
         this.definition = definition;
         this.animationIds = animationIds;
         this.compiler = compiler;
@@ -61,19 +74,25 @@ public final class ControllerMachine {
         }
 
         AnimationControllerDefinition.State current = this.definition.states().get(this.state);
+        double now = now(scope);
         boolean changed = false;
         if (!this.started) {
             this.started = true;
+            this.stateEntry = now;
+            publish(scope, current, now);
             if (current != null) {
                 run(current.onEntry(), scope);
             }
         } else if (current != null) {
+            publish(scope, current, now);
             for (AnimationControllerDefinition.Transition transition : current.transitions()) {
                 if (this.definition.states().containsKey(transition.target())
                         && this.compiler.apply(transition.condition()).evaluateBoolean(scope)) {
                     run(current.onExit(), scope);
                     this.state = transition.target();
                     current = this.definition.states().get(this.state);
+                    this.stateEntry = now;
+                    publish(scope, current, now);
                     run(current.onEntry(), scope);
                     changed = true;
                     break;
@@ -100,5 +119,29 @@ public final class ControllerMachine {
         for (String script : scripts) {
             this.compiler.apply(script).evaluate(scope);
         }
+    }
+
+    private static double now(MolangScope scope) {
+        Object life = scope.context().query("life_time", new Object[0]);
+        return life instanceof Double value ? value : 0.0;
+    }
+
+    private void publish(MolangScope scope, AnimationControllerDefinition.@Nullable State current, double now) {
+        if (!(scope.context() instanceof ControllerTimes times)) {
+            return;
+        }
+        double stateTime = Math.max(0.0, now - this.stateEntry);
+        boolean any = false;
+        boolean all = current != null && !current.animations().isEmpty();
+        if (current != null) {
+            for (AnimationControllerDefinition.StateAnimation animation : current.animations()) {
+                String id = this.animationIds.apply(animation.name());
+                Timing timing = id == null ? null : this.timings.apply(id);
+                boolean finished = timing != null && !timing.loops() && timing.length() > 0 && stateTime >= timing.length();
+                any |= finished;
+                all &= finished;
+            }
+        }
+        times.setControllerTimes(stateTime, stateTime, any, all);
     }
 }

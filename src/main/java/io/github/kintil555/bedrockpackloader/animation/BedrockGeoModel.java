@@ -68,11 +68,16 @@ public final class BedrockGeoModel extends GeoModel<BedrockEntityAnimatable> {
 
     @Override
     public Identifier getModelResource(GeoRenderState renderState) {
-        return this.model;
+        RenderPass pass = renderState.getGeckolibData(BedrockDataTickets.PASS);
+        return pass != null ? pass.model() : this.model;
     }
 
     @Override
     public Identifier getTextureResource(GeoRenderState renderState) {
+        RenderPass pass = renderState.getGeckolibData(BedrockDataTickets.PASS);
+        if (pass != null && pass.texture() != null) {
+            return pass.texture();
+        }
         if (renderState instanceof AvatarRenderState avatar) {
             return avatar.skin.body().texturePath();
         }
@@ -95,6 +100,7 @@ public final class BedrockGeoModel extends GeoModel<BedrockEntityAnimatable> {
     @Override
     public void addAdditionalStateData(BedrockEntityAnimatable animatable, @Nullable Object relatedObject, GeoRenderState renderState) {
         if (relatedObject instanceof Entity entity) {
+            renderState.addGeckolibData(BedrockDataTickets.ENTITY_ID, entity.getId());
             renderState.addGeckolibData(BedrockDataTickets.SNAPSHOT,
                     EntityQueryCapture.capture(entity, renderState.getPartialTick(), this.index.settings()));
         }
