@@ -81,8 +81,9 @@ public final class BedrockHeldItemLayer<R extends GeoRenderState> extends BlockA
         }
         List<RenderData> present = new ArrayList<>(all.size());
         for (RenderData data : all) {
-            if (model.getBone(data.boneName()).isPresent()) {
-                present.add(data);
+            String actual = resolveBone(model, data.boneName());
+            if (actual != null) {
+                present.add(new RenderData(actual, data.displayContext(), data.modelState()));
             }
         }
         if (present.isEmpty()) {
@@ -91,6 +92,16 @@ public final class BedrockHeldItemLayer<R extends GeoRenderState> extends BlockA
         info.renderState().addGeckolibData(CONTENTS, present);
         super.addPerBoneRender(info, consumer);
         info.renderState().addGeckolibData(CONTENTS, all);
+    }
+
+    /** Bedrock bone names are case-insensitive; returns the name as spelled in the model, or null when absent. */
+    private static @Nullable String resolveBone(BakedGeoModel model, String wanted) {
+        for (String name : model.boneLookup().get().keySet()) {
+            if (name.equalsIgnoreCase(wanted)) {
+                return name;
+            }
+        }
+        return null;
     }
 
     @Override
