@@ -67,12 +67,21 @@ public final class TextureMapper {
         String name = rest.substring(rest.lastIndexOf('/') + 1);
 
         return switch (group) {
-            case "blocks" -> rest.contains("carried") ? Optional.empty() : firstAccepted("block/", this.blocks.candidates(name), accepts);
+            case "blocks" -> rest.contains("carried") ? Optional.empty() : firstAccepted("block/", blockCandidates(name), accepts);
             case "items" -> firstAccepted("item/", itemCandidates(rest, name), accepts);
             case "entity" -> mapEntity(rest, name, accepts);
             case "models" -> mapArmor(rest, accepts);
             default -> IDENTITY_GROUPS.contains(group) ? firstAccepted(group + "/", List.of(rest), accepts) : Optional.empty();
         };
+    }
+
+    /** Bedrock stores random-variant blocks as {@code name_0}, {@code name_1}...; the first variant stands in for the single Java texture. */
+    private List<String> blockCandidates(String name) {
+        List<String> candidates = new ArrayList<>(this.blocks.candidates(name));
+        if (name.endsWith("_0") && name.length() > 2) {
+            candidates.addAll(this.blocks.candidates(name.substring(0, name.length() - 2)));
+        }
+        return candidates;
     }
 
     private List<String> itemCandidates(String rest, String name) {

@@ -11,12 +11,23 @@
       "big_oak": "dark_oak", "darkoak": "dark_oak", "dark_oak": "dark_oak", "mangrove": "mangrove",
       "cherry": "cherry", "pale_oak": "pale_oak"
     },
+    "disc": {
+      "11": "11", "13": "13", "5": "5", "cat": "cat", "chirp": "chirp", "far": "far", "mall": "mall",
+      "mellohi": "mellohi", "otherside": "otherside", "pigstep": "pigstep", "stal": "stal", "strad": "strad",
+      "wait": "wait", "ward": "ward"
+    },
     "tier": {
       "wood": "wooden", "stone": "stone", "iron": "iron", "gold": "golden", "diamond": "diamond",
       "netherite": "netherite", "copper": "copper"
     }
   },
   "families": [
+    { "bedrock": "bundle_{color}", "java": "{color}_bundle" },
+    { "bedrock": "bundle_{color}_open", "java": "{color}_bundle_open" },
+    { "bedrock": "bundle_{color}_open_back", "java": "{color}_bundle_open_back" },
+    { "bedrock": "bundle_{color}_open_front", "java": "{color}_bundle_open_front" },
+    { "bedrock": "harness_{color}", "java": "{color}_harness" },
+    { "bedrock": "record_{disc}", "java": "music_disc_{disc}" },
     { "bedrock": "boat_{wood}", "java": "{wood}_boat" },
     { "bedrock": "dye_powder_{color}", "java": "{color}_dye" },
     { "bedrock": "{tier}_sword", "java": "{tier}_sword" },
@@ -92,6 +103,22 @@
     "gold_nugget": "gold_nugget",
     "cookie": "cookie",
     "wheat": "wheat",
-    "sugar": "sugar"
+    "sugar": "sugar",
+    "broken_elytra": "elytra_broken",
+    "chain": "iron_chain",
+    "door_wood": "oak_door",
+    "dragons_breath": "dragon_breath",
+    "fireworks": "firework_rocket",
+    "fireworks_charge": "firework_star",
+    "gold_horse_armor": "golden_horse_armor",
+    "heartofthesea_closed": "heart_of_the_sea",
+    "reeds": "sugar_cane",
+    "sign": "oak_sign",
+    "sign_crimson": "crimson_sign",
+    "sign_warped": "warped_sign",
+    "spider_eye_fermented": "fermented_spider_eye",
+    "tipped_arrow": "tipped_arrow_head",
+    "totem": "totem_of_undying",
+    "turtle_shell_piece": "turtle_scute"
   }
 }
