@@ -38,6 +38,11 @@ public final class JsonIO {
         return element.isJsonObject() ? element.getAsJsonObject() : null;
     }
 
+    /** Serialises an element as compact UTF-8 JSON. */
+    public static byte[] toBytes(JsonElement element) {
+        return element.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
     private static boolean hasUtf8Bom(byte[] bytes) {
         return bytes.length >= 3 && (bytes[0] & 0xFF) == 0xEF && (bytes[1] & 0xFF) == 0xBB && (bytes[2] & 0xFF) == 0xBF;
     }

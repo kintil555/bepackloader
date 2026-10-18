@@ -1,6 +1,8 @@
 package io.github.kintil555.bedrockpackloader.pack;
 
 import com.google.gson.JsonObject;
+import io.github.kintil555.bedrockpackloader.animation.MolangVariableBridge;
+import io.github.kintil555.bedrockpackloader.convert.AnimationSanitizer;
 import io.github.kintil555.bedrockpackloader.convert.FlipbookIndex;
 import io.github.kintil555.bedrockpackloader.convert.GeometrySplitter;
 import io.github.kintil555.bedrockpackloader.convert.PngEncoder;
@@ -218,6 +220,11 @@ public final class PackTranslator {
         }
 
         String relative = PathNames.toIdentifierPath(path.substring("animations/".length()));
+        AnimationSanitizer sanitizer = new AnimationSanitizer(MolangVariableBridge::variableFor);
+        sanitizer.sanitize(root);
+        if (sanitizer.replaced() > 0) {
+            bytes = JsonIO.toBytes(root);
+        }
         if (!resources.putBytes(namespace, GECKOLIB_ANIMATIONS + relative, bytes)) {
             report.warn(path + ": cannot expose animation file");
             return;

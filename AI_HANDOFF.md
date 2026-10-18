@@ -5,7 +5,7 @@
 > **Everything under "DONE" is finished. Do not re-implement or re-analyse it.** Start from "NEXT".
 > Humans may read it too, but it is written for AI. Update it at the end of every work session.
 
-Last updated: 2026-10-18 (milestone 0.6.0-dev: Molang evaluator added, roughly 55% of the planned scope).
+Last updated: 2026-10-18 (milestone 0.6.0-dev: Molang evaluator + keyframe Molang sanitiser, roughly 58% of the planned scope).
 
 ## 0. User preferences (apply these)
 
@@ -39,6 +39,8 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 | Java pack integration | `pack/BedrockPackResources`, `pack/BedrockPackRepositorySource`, `mixin/client/PackRepositoryMixin`, `BedrockPackRegistry`, `BedrockPackLoaderMod` | compiled |
 
 | Molang evaluator | `molang/*` (`MolangExpression`, `MolangScope`, `MolangContext`, `MolangMath`, `MolangParser`, `Node`) | **Verified**: `MolangTest` (15 tests, run with plain javac + stub JUnit, JDK 25) and all 11,447 Molang strings of the test pack parse (0 failures, ~0.5 s). No Minecraft dependency. |
+
+| Keyframe Molang sanitiser | `convert/AnimationSanitizer` (pure Gson), `animation/MolangVariableBridge` (GeckoLib `variable.bpl_N`), hooked in `PackTranslator.translateAnimations`, test `AnimationSanitizerTest` | **Verified**: 3 tests pass (plain javac JDK 25 + stub JUnit); on the test pack's 27 animation files it rewrites 868 expressions (278 distinct), all 278 compile with `molang/`, 0 strings remain that GeckoLib's format rejects. Bridge + `PackTranslator` compile against the GeckoLib and MC 26.2 jars. Not run in game. |
 
 ### NOT yet run anywhere
 - `gradle build` (sandbox cannot reach maven.fabricmc.net; **CI is `.github/workflows/build.yml` (JDK 25, `./gradlew build`, uploads jar + test reports), same layout as MinimalsClient. Let CI build, do not try locally.** Gradle wrapper 9.5.1 is committed.)
@@ -77,6 +79,21 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 - The test pack's player `minecraft:client_entity` (`__brarchive/entity.brarchive`, obfuscated name) has 26 geometries, 32 textures, 610 animation/controller aliases, 14 render controllers (conditional on `v.is_first_person`, `q.is_spectator`, ...), `scripts.pre_animation/initialize/animate/scale/variables`, `enable_attachables`. Pack settings are read through `q.is_pack_setting_selected/enabled('ns:id', 'option')` (manifest `settings`).
 - The pack zip has a single top-level folder (`pack.name/manifest.json`); `BedrockPackRoot.ZipRoot` has prefix handling (not run).
 
+### GeckoLib keyframe Molang (decompiled, verified)
+- `MathParser.compileMolang` throws `CompoundException` for any expression outside `[\w\s_+\-/*%^&|<>=!?:;.,(){}]` (quotes, brackets); `GeckoLibResources` logs the error and the **whole animation file is lost**. In the test pack 867 of 60,658 channel strings are rejected, spread over 9 of 27 animation files. Hence the sanitiser.
+- Rewritten expressions become `variable.bpl_N` (lower-case, matches GeckoLib's variable format). `MathParser.getVariableFor(name)` creates the variable on demand, `Variable.set(ToDoubleFunction<ControllerState>)` sets its value; `Variable.get` returns 0 when the controller state is null. Registration must happen before GeckoLib bakes: it happens in `PackTranslator`, at translation time.
+- Only `rotation`/`position`/`scale` bone channels are sanitised (`pre`/`post`/`vector`/`easing_args` values, bare strings, array elements); `lerp_mode`/`easing` strings are left alone.
+
+### Pack layout facts (test pack)
+- Base `models.brarchive` and `textures.brarchive` have 0 entries. Geometry and textures live in subpacks: geo SP0 93 / SP1 510 / SP2 5, textures mostly SP2 (4,483 block, 747 item, 785 UI), SP1 398 `oreville/ans` textures. SP1 is the smallest subpack with custom animations: use it for the first entity binding test.
+- Nested archives exist (`textures/blocks/candles.brarchive` -> `textures/blocks/candles/*`); expansion rule is the same as for top-level ones, not run.
+- Manifest settings use obfuscated ids (`oreville_ans:fxwjdy`, ...): 7 dropdowns + 7 toggles with defaults. Still ignored by `BedrockManifest`.
+
+### Minecraft 26.2 renderer registration (decompiled)
+- `EntityRenderers.PROVIDERS` is a private static `Map<EntityType<?>, EntityRendererProvider<?>>`; `createEntityRenderers(Context)` builds all renderers, `createAvatarRenderers(Context)` returns `Map<PlayerModelType, AvatarRenderer<T>>` (WIDE and SLIM). Hook those two methods with a mixin (return value) and wrap renderers.
+- `EntityRendererProvider.Context` has a public constructor and getters (`getResourceManager`, `getItemModelResolver`, ...).
+- `GeoReplacedEntityRenderer` throws `IllegalArgumentException` if the animatable is an `Entity`; animatables must be singleton `GeoReplacedEntity` (`animatableCacheOverride` gives a `SingletonAnimatableInstanceCache`).
+
 ### Test pack findings (Oreville "Actions & Stuff", used only locally)
 - Manifest format 3, subpacks SP0 (Custom), SP1 (Vanilla textures + custom animations), SP2 (Full). Name is a translation key `pack.name` resolved from `texts/en_US.lang`.
 - Base `__brarchive`: 126 client entities (incl. `minecraft:player`), 2,623 animation defs in 13 files, 551 geo files (up to ~1.8 MB each), 80 render controllers, 1,529 attachables.
@@ -99,7 +116,7 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 1. **Check the first CI run** of `.github/workflows/build.yml` (never confirmed yet; Loom 1.15.2, Fabric API 0.157.0+26.2 and loader 0.19.3 are copied from MinimalsClient). Fix compile errors the sandbox could not see (the main code was only checked with javac against stubs). Then: translate the test pack in a harness and read `TranslationReport`; launch the client and check the pack list.
 2. More unit tests in `src/test/java` (only `molang/MolangTest` exists). Missing: BrArchive with a synthetic archive, TextureMapper, TgaDecoder, GeometrySplitter, controller parsing. Do not use real pack content.
 3. **Entity binding** (next; Molang is ready to be used for `scripts.*`, controllers and render controllers; GeckoLib 5.5.5 facts: `GeoReplacedEntityRenderer<T extends GeoAnimatable, E extends Entity, R extends EntityRenderState>(Context, GeoModel<T>, T animatable)`, `GeoModel` needs `getModelResource(GeoRenderState)`, `getTextureResource(GeoRenderState)`, `getAnimationResource(T)`; animatable must implement `GeoReplacedEntity` (singleton, not an Entity); player renderer in MC 26.2 is `net.minecraft.client.renderer.entity.player.AvatarRenderer`, entity class `net.minecraft.world.entity.Avatar`; renderers are built at resource reload from `EntityRenderers` providers, so a provider must delegate to the vanilla renderer when no Bedrock definition applies): map `ClientEntityDefinition` (geometry/texture/animation short names) to a GeckoLib renderer for the matching vanilla entity type. Check how GeckoLib 5 renderers are built (decompile `com.geckolib.renderer`, `com.geckolib.model`), then the player first (see `actionandstuffport` for known player animation pitfalls).
-4. **Animation controller playback**: translate `AnimationControllerDefinition` (states, transitions, blend, on_entry/on_exit) to GeckoLib animation controllers; evaluate Molang with our own `molang/` package (**not** GeckoLib's `MathParser`, it rejects strings and `??`); keyframe expressions inside animation JSON also contain Molang that GeckoLib itself will try to parse, so sanitise or pre-evaluate them (not investigated yet); implement the `q.*` / `v.*` query set used by the pack.
+4. **Animation controller playback**: translate `AnimationControllerDefinition` (states, transitions, blend, on_entry/on_exit) to GeckoLib animation controllers; evaluate Molang with our own `molang/` package (**not** GeckoLib's `MathParser`, it rejects strings and `??`); keyframe Molang is already sanitised (see section 3): call `MolangVariableBridge.setScopeProvider` from the entity binding so `variable.bpl_N` sees the animated entity (default scope = EMPTY, every query 0); implement the `q.*` / `v.*` query set used by the pack.
 5. Render controllers (`render_controllers`), attachables (held/armor items), particles, sounds (`sounds.json` / `sound_definitions.json`), UI textures, PBR (`_mer`/`_normal`) if shaders allow.
 6. Extend alias tables to raise vanilla coverage; consider `terrain_texture.json` / `item_texture.json` for authoritative names.
 7. Optional: legacy 1.8.0 geometry conversion, in-game pack settings (Bedrock `settings` in manifest are currently ignored).
@@ -112,7 +129,8 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 - `FolderRepositorySource` ignores Bedrock zips in `resourcepacks/` without breaking (it may log a warning).
 - Molang array index out of range is clamped (Bedrock behaviour not verified). `a->b` returns 0.
 - `BedrockPackRoot.ZipRoot` prefix handling for the test zip (single top-level folder `pack.name/`) has not been run.
-- GeckoLib parses Molang inside animation JSON itself and will throw/skip on strings, `??`, `[ ]`: how it fails (whole file or single keyframe) is unknown.
+- Sanitised keyframe variables evaluate through `MolangVariableBridge`; in game they return 0 for every query until a scope provider is set. `ControllerState.renderState()` is the way to reach the entity (API not inspected yet).
+- `JsonIO.toBytes` re-serialises a sanitised animation file compactly (Gson `toString`), unverified in game.
 - Gson in MC 26.2 treats `JsonParser.parseReader` as lenient (comments in Bedrock JSON). True for 2.10 and 2.11+ by documentation, not run.
 
 ## 7. Sandbox tips (if working in a restricted environment)
@@ -122,6 +140,7 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 - Compile-check without Gradle: JDK 25 via apt (`openjdk-25-jdk-headless`), classpath = MC jar + nested jars of Fabric API (from the GitHub release of the Fabric API version in `gradle.properties`) + apt libs (gson, guava, slf4j, fastutil) + hand-written stubs for fabric-loader, Mixin annotations, jspecify, `com.mojang.logging.LogUtils`, `com.mojang.brigadier.Message`.
 - Running code that touches `Identifier` needs DFU (missing): use a stub with the same validation rules (`[a-z0-9_.-]` namespace, `[a-z0-9/._-]` path).
 - Vineflower: `java -jar vineflower-1.12.0.jar -e=<library jar> <input dir> <output dir>` (runs fine on JDK 21; decompile only `com/geckolib/{renderer,model,animation,animatable,loading/math,event}`, 135 files, a few seconds).
+- `apt-get update` then `openjdk-25-jdk-headless` gives `javac` (the default JRE 21 has none); `libgoogle-gson-java`, `libslf4j-java`, `libguava-java`, `libfastutil-java` give the jars. Compile-check that worked: `javac --release 25 -proc:none -cp geckolib jar:MC jar:gson:slf4j:guava:fastutil -sourcepath <stub BedrockPackLoaderMod>:src/main/java src/main/java/.../pack/PackTranslator.java`.
 - Running the Molang tests without Gradle: compile `molang/*.java` + `MolangTest.java` with a 2-class stub of `org.junit.jupiter.api.{Test,Assertions}` and a reflective runner; JDK 25 (`javac --release 25`).
 - Reading the test pack: a 20-line Python reader for `.brarchive` (format in section 3) extracts everything; entity/animation/controller/render-controller JSON files have obfuscated names, search by content.
 

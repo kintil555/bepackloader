@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Sanitise Bedrock keyframe Molang that GeckoLib rejects (quotes, brackets, `??`): expressions become `variable.bpl_N` evaluated by the own Molang evaluator, so those animation files no longer fail to load. Tests in `AnimationSanitizerTest`.
 - Add Gradle wrapper (9.5.1), CI workflow aligned with MinimalsClient, Maven repositories, committed GeckoLib 5.5.5 jar (MIT); use Loom 1.15.2 / Fabric API 0.157.0+26.2 / loader 0.19.3.
 - Add Bedrock Molang evaluator (`molang` package): strings, `??`, ternary blocks, `loop`/`break`/`continue`/`return`, `math.*` incl. all easing functions, host-provided queries. Unit tests in `MolangTest`.
 
