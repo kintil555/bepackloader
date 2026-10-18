@@ -5,7 +5,7 @@
 > **Everything under "DONE" is finished. Do not re-implement or re-analyse it.** Start from "NEXT".
 > Humans may read it too, but it is written for AI. Update it at the end of every work session.
 
-Last updated: 2026-10-18 (milestone 0.5.0, roughly 50% of the planned scope).
+Last updated: 2026-10-18 (milestone 0.6.0-dev: Molang evaluator added, roughly 55% of the planned scope).
 
 ## 0. User preferences (apply these)
 
@@ -36,8 +36,10 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 | Identifier indices (geometry, animation, controller, client entity) | `index/*` | compiled |
 | Java pack integration | `pack/BedrockPackResources`, `pack/BedrockPackRepositorySource`, `mixin/client/PackRepositoryMixin`, `BedrockPackRegistry`, `BedrockPackLoaderMod` | compiled |
 
+| Molang evaluator | `molang/*` (`MolangExpression`, `MolangScope`, `MolangContext`, `MolangMath`, `MolangParser`, `Node`) | **Verified**: `MolangTest` (15 tests, run with plain javac + stub JUnit, JDK 25) and all 11,447 Molang strings of the test pack parse (0 failures, ~0.5 s). No Minecraft dependency. |
+
 ### NOT yet run anywhere
-- `gradle build` (sandbox could not reach maven.fabricmc.net)
+- `gradle build` (sandbox cannot reach maven.fabricmc.net; **the repo has `.github/workflows/build.yml`, let CI build, do not try locally**)
 - end-to-end translation of a real pack
 - in-game launch
 - unit tests: **`src/test/java` is empty** (JUnit is declared in `build.gradle` but no tests exist yet)
@@ -65,6 +67,14 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 - Fabric API `ResourceLoader` (v1) has **no** hook for dynamic/user packs (only `registerBuiltinPack` for mod-bundled ones). Hence the mixin on `PackRepository.<init>` that appends `BedrockPackRepositorySource` when a `ClientPackSource` is among the sources.
 - Custom pack = implement `PackResources` and create via `Pack.readMetaAndCreate(PackLocationInfo, Pack.ResourcesSupplier, PackType, PackSelectionConfig)`. `getMetadataSection` returns `PackMetadataSection(description, SharedConstants.getCurrentVersion().packVersion(CLIENT_RESOURCES).minorRange())`.
 
+### Molang facts (verified on the test pack)
+- **GeckoLib's `MathParser` cannot be used for Bedrock Molang**: its regex rejects `'` (strings), `[`/`]` and it lower-cases input; the pack has ~19,000 string literals (`q.is_item_name_any('slot.weapon.mainhand', ...)`), 617 `??`, 615 `array.x[...]`, `loop`, `break`, `continue`, `return`, `cond ? { ...; return X; }` blocks, `this`, `a->b`, `1.0E-4`. Hence our own evaluator in `molang/`.
+- Query usage in the pack: 168 distinct `q.*`. Top: anim_time, life_time, is_item_name_any, is_in_ui, entity_biome_has_any_identifier, state_time, is_on_ground, equipped_item_any_tag, modified_move_speed, is_pack_setting_selected, is_name_any, target_x/y_rotation, any_animation_finished, is_baby, in_range, is_in_water, delta_time, vertical_speed, is_attached, is_riding, graphics_mode_is_any, body_y_rotation, position, ground_speed, ...
+- `this` is parsed as context value `"this"` (host must `scope.setContextValue("this", currentChannelValue)` before evaluating a keyframe). `a->b` evaluates to 0 (unsupported). Unsupported queries evaluate to 0 and are reported once per scope via `MolangContext.unsupportedQuery`.
+- Semantics implemented: multi-statement expressions yield 0 unless `return` runs; single expression yields its value; unset variable = 0 for arithmetic but `null` for `??`; `x/0 = 0`; trig in degrees; array index floored+clamped (**assumption**, Bedrock behaviour for out-of-range not verified); loop capped at 1024 iterations.
+- The test pack's player `minecraft:client_entity` (`__brarchive/entity.brarchive`, obfuscated name) has 26 geometries, 32 textures, 610 animation/controller aliases, 14 render controllers (conditional on `v.is_first_person`, `q.is_spectator`, ...), `scripts.pre_animation/initialize/animate/scale/variables`, `enable_attachables`. Pack settings are read through `q.is_pack_setting_selected/enabled('ns:id', 'option')` (manifest `settings`).
+- The pack zip has a single top-level folder (`pack.name/manifest.json`); `BedrockPackRoot.ZipRoot` has prefix handling (not run).
+
 ### Test pack findings (Oreville "Actions & Stuff", used only locally)
 - Manifest format 3, subpacks SP0 (Custom), SP1 (Vanilla textures + custom animations), SP2 (Full). Name is a translation key `pack.name` resolved from `texts/en_US.lang`.
 - Base `__brarchive`: 126 client entities (incl. `minecraft:player`), 2,623 animation defs in 13 files, 551 geo files (up to ~1.8 MB each), 80 render controllers, 1,529 attachables.
@@ -86,7 +96,7 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 
 1. **Run reality checks first** (cheap, highest value): `gradle build`; translate the test pack in a harness and read `TranslationReport`; launch the client and check the pack list. Fix whatever breaks.
 2. Unit tests in `src/test/java` (BrArchive with a synthetic archive, TextureMapper, TgaDecoder, GeometrySplitter, controller parsing). Do not use real pack content.
-3. **Entity binding**: map `ClientEntityDefinition` (geometry/texture/animation short names) to a GeckoLib renderer for the matching vanilla entity type. Check how GeckoLib 5 renderers are built (decompile `com.geckolib.renderer`, `com.geckolib.model`), then the player first (see `actionandstuffport` for known player animation pitfalls).
+3. **Entity binding** (next; Molang is ready to be used for `scripts.*`, controllers and render controllers; GeckoLib 5.5.5 facts: `GeoReplacedEntityRenderer<T extends GeoAnimatable, E extends Entity, R extends EntityRenderState>(Context, GeoModel<T>, T animatable)`, `GeoModel` needs `getModelResource(GeoRenderState)`, `getTextureResource(GeoRenderState)`, `getAnimationResource(T)`; animatable must implement `GeoReplacedEntity` (singleton, not an Entity); player renderer in MC 26.2 is `net.minecraft.client.renderer.entity.player.AvatarRenderer`, entity class `net.minecraft.world.entity.Avatar`; renderers are built at resource reload from `EntityRenderers` providers, so a provider must delegate to the vanilla renderer when no Bedrock definition applies): map `ClientEntityDefinition` (geometry/texture/animation short names) to a GeckoLib renderer for the matching vanilla entity type. Check how GeckoLib 5 renderers are built (decompile `com.geckolib.renderer`, `com.geckolib.model`), then the player first (see `actionandstuffport` for known player animation pitfalls).
 4. **Animation controller playback**: translate `AnimationControllerDefinition` (states, transitions, blend, on_entry/on_exit) to GeckoLib animation controllers; evaluate Molang via GeckoLib's `MathParser` (`com.geckolib.loading.math`); implement the `q.*` / `v.*` query set used by the pack.
 5. Render controllers (`render_controllers`), attachables (held/armor items), particles, sounds (`sounds.json` / `sound_definitions.json`), UI textures, PBR (`_mer`/`_normal`) if shaders allow.
 6. Extend alias tables to raise vanilla coverage; consider `terrain_texture.json` / `item_texture.json` for authoritative names.
