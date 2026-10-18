@@ -4,10 +4,7 @@ import io.github.kintil555.bedrockpackloader.screen.BedrockHelpScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.FriendsButton;
-import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.Tooltip;
-import net.minecraft.client.gui.components.events.GuiEventListener;
-import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.chat.Component;
@@ -19,16 +16,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** Adds a "?" button right of the small icon row (friends, language, accessibility) on the title screen. */
 @Mixin(TitleScreen.class)
-public abstract class TitleScreenMixin {
+public abstract class TitleScreenMixin extends Screen {
     @Shadow
     private FriendsButton friends;
 
-    @Shadow
-    protected abstract <T extends GuiEventListener & Renderable & NarratableEntry> T addRenderableWidget(T widget);
+    protected TitleScreenMixin(Component title) {
+        super(title);
+    }
 
     @Inject(method = "init", at = @At("TAIL"))
     private void bedrockpackloader$addHelpButton(CallbackInfo ci) {
-        Screen screen = (Screen) (Object) this;
+        Screen screen = this;
         // the row has three 20px buttons spaced by 4px; the new one goes after the third
         int x = friends.getX() + 3 * 24;
         addRenderableWidget(Button.builder(Component.literal("?"), button -> Minecraft.getInstance().gui.setScreen(new BedrockHelpScreen(screen)))
