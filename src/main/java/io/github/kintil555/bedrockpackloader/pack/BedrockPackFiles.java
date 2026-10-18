@@ -101,6 +101,9 @@ public final class BedrockPackFiles {
 
         BrArchive archive = BrArchive.parse(bytes);
         for (BrArchive.Entry entry : archive.entries()) {
+            if (entry.length() == 0) {
+                continue; // Placeholder stubs: the real file ships loose next to the archive and must not be replaced by nothing.
+            }
             target.put(directory + entry.name(), new Node(() -> archive.open(entry), layer));
         }
     }

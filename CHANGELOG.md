@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Fix: textures/animations were empty in game ("PNG header missing", 0 textures mapped). Real packs ship zero-length `.brarchive` stub entries next to the loose files; they replaced the real files. `BedrockPackFiles.expand` now skips zero-length entries. Test `BedrockPackFilesTest`.
+- Fix: `.tga` files that actually contain PNG data (65 in the test pack) are passed through; type is detected from content, not extension.
 - Title screen: "?" button in the first free slot right of the small icon row (late Fabric phase, avoids Mod Menu's button) opens `BedrockHelpScreen` (accepted formats, folders, how to enable; en_us and id_id).
 - Held items: `BedrockHeldItemLayer` draws main/off-hand items on the Bedrock player through the bones `rightItem` / `leftItem` (bones missing from the model are skipped).  Bone names are matched case-insensitively.
 - Render controller `part_visibility` (bone patterns with wildcards, Molang conditions) applied per pass.

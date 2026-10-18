@@ -60,6 +60,10 @@ Related private project: `kintil555/actionandstuffport` (manual port of the same
 - unit tests: **`src/test/java` is empty** (JUnit is declared in `build.gradle` but no tests exist yet)
 
 ## 3. Verified facts (do not re-investigate)
+### Texture loading bug (fixed 2026-10-18, verified in a plain-Java harness on the real zip)
+- Cause: `.brarchive` files in the test pack contain many **zero-length entries** (e.g. 3,124 of 4,483 in `SP2/__brarchive/textures/blocks.brarchive`); the real files are loose next to them. Expansion overwrote the loose files with empty streams, so every texture was empty (`readSize` null => 0 mapped; atlas => "PNG header missing", which means buffer < 16 bytes). Fix: skip zero-length entries in `BedrockPackFiles.expand`. After the fix: SP2 maps 1,478 of 6,069 textures to vanilla (blocks 877, items 519, entity 57, painting 21), all 130 real TGAs decode.
+- 65 `.tga` files in the pack contain PNG data; type is now sniffed from the magic bytes.
+
 
 ### brarchive format (little-endian)
 - Header 16 bytes: `u64 magic 0x267052A0B125277D`, `u32 entryCount`, `u32 version (=1)`.

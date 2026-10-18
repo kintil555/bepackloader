@@ -42,6 +42,8 @@ public final class PackTranslator {
     private static final String GECKOLIB_MODELS = "geckolib/models/";
     private static final String GECKOLIB_ANIMATIONS = "geckolib/animations/";
 
+    private static final byte[] PNG_MAGIC = {(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'};
+
     private final TextureMapper mapper;
 
     public PackTranslator(TextureMapper mapper) {
@@ -104,8 +106,7 @@ public final class PackTranslator {
     private void translateTexture(BedrockPackFiles files, String path, String namespace, VirtualResources resources,
                                   FlipbookIndex flipbooks, TranslationReport report) {
         String extension = PathNames.extension(path);
-        boolean tga = extension.equals("tga");
-        if (!tga && !extension.equals("png")) {
+        if (!extension.equals("tga") && !extension.equals("png")) {
             return;
         }
         if (PBR_SUFFIX.matcher(path.toLowerCase(Locale.ROOT)).find()) {
@@ -114,6 +115,8 @@ public final class PackTranslator {
         }
 
         IoSupplier<InputStream> source = files.get(path);
+        // Some packs ship PNG data under a .tga name, so the content decides, not the extension.
+        boolean tga = extension.equals("tga") && !isPng(source);
         IoSupplier<InputStream> png = tga ? tgaToPng(source) : source;
         if (tga) {
             report.tgaConverted++;
@@ -155,6 +158,15 @@ public final class PackTranslator {
                 return new ByteArrayInputStream(PngEncoder.encode(image.width(), image.height(), image.rgba()));
             }
         };
+    }
+
+    private static boolean isPng(IoSupplier<InputStream> source) {
+        try (InputStream in = source.get()) {
+            byte[] magic = in.readNBytes(PNG_MAGIC.length);
+            return java.util.Arrays.equals(magic, PNG_MAGIC);
+        } catch (IOException ex) {
+            return false;
+        }
     }
 
     /** Reads {@code {width, height}} from the file header, or returns null when it cannot be determined. */
