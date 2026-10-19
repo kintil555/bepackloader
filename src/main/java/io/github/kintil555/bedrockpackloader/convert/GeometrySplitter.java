@@ -63,6 +63,18 @@ public final class GeometrySplitter {
             return;
         }
         JsonArray bones = geometry.getAsJsonArray("bones");
+        // Bedrock matches bone names case-insensitively (packs animate "rightleg" on a "rightLeg" bone); GeckoLib does
+        // not, so every geometry and animation uses lower-case names.
+        for (JsonElement bone : bones) {
+            if (bone.isJsonObject()) {
+                for (String key : new String[]{"name", "parent"}) {
+                    JsonObject object = bone.getAsJsonObject();
+                    if (object.has(key) && object.get(key).isJsonPrimitive()) {
+                        object.addProperty(key, object.get(key).getAsString().toLowerCase(java.util.Locale.ROOT));
+                    }
+                }
+            }
+        }
         Set<String> names = new HashSet<>();
         for (JsonElement bone : bones) {
             if (bone.isJsonObject() && bone.getAsJsonObject().has("name")) {

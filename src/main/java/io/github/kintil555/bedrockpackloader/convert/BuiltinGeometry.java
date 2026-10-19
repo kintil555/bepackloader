@@ -84,9 +84,9 @@ public final class BuiltinGeometry {
 
     private static JsonObject bone(String name, String parent, double x, double y, double z) {
         JsonObject bone = new JsonObject();
-        bone.addProperty("name", name);
+        bone.addProperty("name", name.toLowerCase(java.util.Locale.ROOT));
         if (parent != null) {
-            bone.addProperty("parent", parent);
+            bone.addProperty("parent", parent.toLowerCase(java.util.Locale.ROOT));
         }
         bone.add("pivot", vector(x, y, z));
         return bone;

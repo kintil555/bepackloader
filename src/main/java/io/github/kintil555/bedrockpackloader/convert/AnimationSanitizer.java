@@ -81,6 +81,7 @@ public final class AnimationSanitizer {
                     || !animation.getValue().getAsJsonObject().get("bones").isJsonObject()) {
                 continue;
             }
+            lowerCaseBones(animation.getValue().getAsJsonObject());
             for (Map.Entry<String, JsonElement> bone : animation.getValue().getAsJsonObject().getAsJsonObject("bones").entrySet()) {
                 if (bone.getValue().isJsonObject()) {
                     sanitizeBone(bone.getValue().getAsJsonObject());
@@ -158,6 +159,30 @@ public final class AnimationSanitizer {
             animation.addProperty("blend_weight", this.variableFor.apply(blend.getAsString()));
             this.replaced++;
         }
+    }
+
+    /** Bone names are case-insensitive in Bedrock; geometries are written in lower case, so animations must be too. */
+    private void lowerCaseBones(JsonObject animation) {
+        JsonObject bones = animation.getAsJsonObject("bones");
+        boolean changed = false;
+        for (String name : bones.keySet()) {
+            if (!name.equals(name.toLowerCase(java.util.Locale.ROOT))) {
+                changed = true;
+                break;
+            }
+        }
+        if (!changed) {
+            return;
+        }
+        JsonObject result = new JsonObject();
+        for (Map.Entry<String, JsonElement> bone : bones.entrySet()) {
+            String lower = bone.getKey().toLowerCase(java.util.Locale.ROOT);
+            if (!result.has(lower)) {
+                result.add(lower, bone.getValue());
+            }
+        }
+        animation.add("bones", result);
+        this.replaced++;
     }
 
     private static double parseTime(String key) {

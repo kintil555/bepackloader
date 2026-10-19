@@ -70,6 +70,18 @@ class AnimationSanitizerTest {
     }
 
     @Test
+    void boneNamesAreLowerCased() {
+        JsonObject file = parse("""
+                {"animations":{"a":{"bones":{"rightLeg":{"rotation":[1,2,3]},"Head":{"rotation":[0,0,0]}}}}}""");
+        sanitizer(new ArrayList<>()).sanitize(file);
+
+        var bones = file.getAsJsonObject("animations").getAsJsonObject("a").getAsJsonObject("bones");
+        assertTrue(bones.has("rightleg"));
+        assertTrue(bones.has("head"));
+        assertFalse(bones.has("rightLeg"));
+    }
+
+    @Test
     void objectVectorComponentBecomesZero() {
         JsonObject file = parse("""
                 {"animations":{"a":{"bones":{"b":{"rotation":[{"y":"180-this"},{"x":"q.t"},5]}}}}}""");

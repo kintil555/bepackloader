@@ -26,7 +26,7 @@ class GeometrySplitterTest {
     @Test
     void builtinHumanoidHasTheBonesPacksAnimate() {
         String json = new String(BuiltinGeometry.all().get("geometry.humanoid.custom"), java.nio.charset.StandardCharsets.UTF_8);
-        for (String bone : new String[]{"root", "waist", "body", "head", "hat", "rightArm", "leftArm", "rightLeg", "leftLeg", "rightItem", "leftItem"}) {
+        for (String bone : new String[]{"root", "waist", "body", "head", "hat", "rightarm", "leftarm", "rightleg", "leftleg", "rightitem", "leftitem"}) {
             assertTrue(json.contains("\"name\":\"" + bone + "\""), bone);
         }
     }
