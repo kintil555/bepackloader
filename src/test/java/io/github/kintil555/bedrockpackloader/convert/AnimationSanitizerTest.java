@@ -62,6 +62,11 @@ class AnimationSanitizerTest {
         assertTrue(AnimationSanitizer.needsRewrite("array.x[0]"));
         assertFalse(AnimationSanitizer.needsRewrite("math.sin(q.anim_time*90)"));
         assertTrue(AnimationSanitizer.needsRewrite("1.1+Math.mod(q.life_time,1.5)*0.125"));
+        assertTrue(AnimationSanitizer.needsRewrite("-this-10"));
+        assertTrue(AnimationSanitizer.needsRewrite("Math.sin(q.body_y_rotation)*3"));
+        assertTrue(AnimationSanitizer.needsRewrite("query.is_on_ground*2"));
+        assertFalse(AnimationSanitizer.needsRewrite("Math.cos(q.anim_time*60)*2"));
+        assertFalse(AnimationSanitizer.needsRewrite("q.life_time*20"));
     }
 
     @Test

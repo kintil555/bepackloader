@@ -50,7 +50,7 @@ public final class BedrockEntityAnimatable implements GeoReplacedEntity {
 
             Optional<AnimationControllerDefinition> controller = this.index.controller(id);
             if (controller.isPresent()) {
-                ControllerMachine machine = new ControllerMachine(controller.get(), this.definition.animations()::get, BedrockEntityRuntime::compile, this::timing);
+                ControllerMachine machine = new ControllerMachine(controller.get(), this::playableAnimation, BedrockEntityRuntime::compile, this::timing);
                 int slots = ControllerMachine.maxAnimations(controller.get());
                 for (int slot = 0; slot < slots; slot++) {
                     int index = slot;
@@ -130,6 +130,15 @@ public final class BedrockEntityAnimatable implements GeoReplacedEntity {
 
     private static @Nullable String key(@Nullable String value, String prefix) {
         return value != null && value.startsWith(prefix) ? value.substring(prefix.length()) : null;
+    }
+
+    /**
+     * The animation id behind a short name, or null when it does not name an animation GeckoLib can play (nested
+     * controllers, ids missing from the pack). Asking GeckoLib for such an id logs an error every frame.
+     */
+    private @Nullable String playableAnimation(String name) {
+        String id = this.definition.animations().get(name);
+        return id != null && this.index.animation(id).isPresent() ? id : null;
     }
 
     private ControllerMachine.@Nullable Timing timing(String animationId) {

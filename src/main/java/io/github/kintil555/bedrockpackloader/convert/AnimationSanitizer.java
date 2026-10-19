@@ -4,10 +4,12 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 /**
@@ -21,16 +23,35 @@ import java.util.regex.Pattern;
 public final class AnimationSanitizer {
     /** The character set GeckoLib accepts in an expression ({@code MathParser.EXPRESSION_FORMAT}). */
     private static final Pattern GECKOLIB_FORMAT = Pattern.compile("^[\\w\\s_+\\-/*%^&|<>=!?:;.,(){}]+$");
+    /**
+     * GeckoLib answers these queries by casting its animatable to {@code Entity}; ours is a shared singleton, so
+     * evaluating one throws a ClassCastException on the render thread. Expressions using them are routed through the
+     * own evaluator, which reads the real entity.
+     */
+    private static final Pattern ENTITY_QUERY = Pattern.compile("\\b(?:q|query)\\.(?:main_hand_item_max_duration|main_hand_item_use_duration|is_in_contact_with_water|item_max_use_duration|rider_body_x_rotation|rider_body_y_rotation|rider_head_x_rotation|rider_head_y_rotation|distance_from_camera|remaining_durability|is_in_water_or_rain|cardinal_facing_2d|invulnerable_ticks|movement_direction|get_actor_info_id|limb_swing_amount|has_player_rider|is_wall_climbing|body_x_rotation|body_y_rotation|cardinal_facing|equipment_count|head_x_rotation|head_y_rotation|is_fire_immune|max_durability|sleep_rotation|vertical_speed|has_collision|has_head_gear|is_using_item|ground_speed|is_breathing|is_enchanted|is_invisible|is_on_ground|is_sprinting|is_stackable|block_state|death_ticks|has_gravity|is_in_water|is_sleeping|is_sneaking|is_swimming|is_in_lava|is_leashed|is_on_fire|is_saddled|limb_swing|max_health|can_climb|has_owner|has_rider|hurt_time|is_moving|is_riding|is_silent|yaw_speed|blocking|can_swim|can_walk|is_alive|is_angry|can_fly|is_baby|health|scale)\\b", Pattern.CASE_INSENSITIVE);
+    /** {@code this} (the channel's current value) is not understood by GeckoLib's parser. */
+    private static final Pattern THIS_KEYWORD = Pattern.compile("\\bthis\\b", Pattern.CASE_INSENSITIVE);
     private static final Pattern MOD_CALL = Pattern.compile("\\bmod\\s*\\(", Pattern.CASE_INSENSITIVE);
     private static final List<String> CHANNELS = List.of("rotation", "position", "scale");
     private static final Set<String> VALUE_KEYS = Set.of("pre", "post", "vector", "easing_args");
 
     private final Function<String, String> variableFor;
+    private final Predicate<String> rejected;
     private int replaced;
 
     /** @param variableFor maps a Molang expression to the name of a GeckoLib variable that evaluates it */
     public AnimationSanitizer(Function<String, String> variableFor) {
+        this(variableFor, expression -> false);
+    }
+
+    /**
+     * @param rejected extra check, typically GeckoLib's own parser, for expressions {@link #needsRewrite} cannot
+     *                 recognise statically; results are cached per expression
+     */
+    public AnimationSanitizer(Function<String, String> variableFor, Predicate<String> rejected) {
         this.variableFor = variableFor;
+        Map<String, Boolean> cache = new HashMap<>();
+        this.rejected = expression -> cache.computeIfAbsent(expression, rejected::test);
     }
 
     /** Number of expressions replaced so far. */
@@ -42,7 +63,8 @@ public final class AnimationSanitizer {
     public static boolean needsRewrite(String expression) {
         // GeckoLib 5.5.5 builds math.mod(a, b) with a null modulus and throws, which drops the whole animation file.
         return !GECKOLIB_FORMAT.matcher(expression).matches() || expression.contains("??") || expression.contains("->")
-                || MOD_CALL.matcher(expression).find();
+                || MOD_CALL.matcher(expression).find() || THIS_KEYWORD.matcher(expression).find()
+                || ENTITY_QUERY.matcher(expression).find();
     }
 
     /** Sanitises, in place, every bone channel of every animation in an animation file. */
@@ -53,6 +75,7 @@ public final class AnimationSanitizer {
         for (Map.Entry<String, JsonElement> animation : file.getAsJsonObject("animations").entrySet()) {
             if (animation.getValue().isJsonObject()) {
                 sanitizeEffects(animation.getValue().getAsJsonObject());
+                sanitizeAnimationLevel(animation.getValue().getAsJsonObject());
             }
             if (!animation.getValue().isJsonObject() || !animation.getValue().getAsJsonObject().has("bones")
                     || !animation.getValue().getAsJsonObject().get("bones").isJsonObject()) {
@@ -117,6 +140,26 @@ public final class AnimationSanitizer {
         }
     }
 
+    /**
+     * {@code anim_time_update} and {@code blend_weight} are evaluated by GeckoLib too. A blend weight GeckoLib cannot
+     * evaluate goes through the own evaluator; an unusable time update is dropped (the animation then plays at its
+     * normal speed), because the own evaluator cannot see GeckoLib's animation clock.
+     */
+    private void sanitizeAnimationLevel(JsonObject animation) {
+        JsonElement timeUpdate = animation.get("anim_time_update");
+        if (timeUpdate != null && timeUpdate.isJsonPrimitive() && timeUpdate.getAsJsonPrimitive().isString()
+                && (needsRewrite(timeUpdate.getAsString()) || this.rejected.test(timeUpdate.getAsString()))) {
+            animation.remove("anim_time_update");
+            this.replaced++;
+        }
+        JsonElement blend = animation.get("blend_weight");
+        if (blend != null && blend.isJsonPrimitive() && blend.getAsJsonPrimitive().isString()
+                && (needsRewrite(blend.getAsString()) || this.rejected.test(blend.getAsString()))) {
+            animation.addProperty("blend_weight", this.variableFor.apply(blend.getAsString()));
+            this.replaced++;
+        }
+    }
+
     private static double parseTime(String key) {
         try {
             return Double.parseDouble(key);
@@ -174,7 +217,7 @@ public final class AnimationSanitizer {
     private JsonElement convert(JsonElement element) {
         if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()) {
             String expression = element.getAsString();
-            if (!expression.isBlank() && needsRewrite(expression)) {
+            if (!expression.isBlank() && (needsRewrite(expression) || this.rejected.test(expression))) {
                 this.replaced++;
                 return new JsonPrimitive(this.variableFor.apply(expression));
             }

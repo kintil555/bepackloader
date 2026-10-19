@@ -92,7 +92,9 @@ public record EntityQuerySnapshot(
             case "is_local_player" -> bool(this.extras.localPlayer());
             case "has_cape" -> bool(this.extras.hasCape());
             case "has_head_gear" -> bool(this.extras.hasHeadGear());
-            case "is_persona_or_premium_skin" -> 0.0;
+            case "is_persona_or_premium_skin", "is_sleeping", "is_using_item", "hurt_time", "limb_swing" -> 0.0;
+            case "is_moving" -> bool(this.groundSpeed > 0.2);
+            case "limb_swing_amount" -> this.moveSpeed;
             case "health" -> this.extras.health();
             case "max_health" -> this.extras.maxHealth();
             case "delta_time" -> this.extras.deltaTime();

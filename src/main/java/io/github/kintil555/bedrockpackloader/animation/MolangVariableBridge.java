@@ -26,6 +26,16 @@ public final class MolangVariableBridge {
     private MolangVariableBridge() {
     }
 
+    /** True when GeckoLib's own parser cannot compile {@code expression}, which would drop its animation. */
+    public static boolean geckoLibRejects(String expression) {
+        try {
+            com.geckolib.loading.math.MathParser.create().compileMolang(expression);
+            return false;
+        } catch (Throwable ex) {
+            return true;
+        }
+    }
+
     /**
      * Sets how a scope (queries and variables of the animated entity) is built from GeckoLib's controller state.
      * Without a provider every query evaluates to 0.

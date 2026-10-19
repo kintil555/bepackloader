@@ -274,7 +274,7 @@ public final class PackTranslator {
         }
 
         String relative = PathNames.toIdentifierPath(path.substring("animations/".length()));
-        AnimationSanitizer sanitizer = new AnimationSanitizer(MolangVariableBridge::variableFor);
+        AnimationSanitizer sanitizer = new AnimationSanitizer(MolangVariableBridge::variableFor, MolangVariableBridge::geckoLibRejects);
         sanitizer.sanitize(root);
         if (sanitizer.replaced() > 0) {
             bytes = JsonIO.toBytes(root);
