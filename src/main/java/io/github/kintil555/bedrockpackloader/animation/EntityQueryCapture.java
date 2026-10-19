@@ -19,6 +19,8 @@ import net.minecraft.world.phys.Vec3;
 public final class EntityQueryCapture {
     private static final double TICKS_PER_SECOND = 20.0;
 
+    private static long lastNanos;
+
     private EntityQueryCapture() {
     }
 
@@ -34,6 +36,29 @@ public final class EntityQueryCapture {
             bodyYaw = Mth.rotLerp(partialTick, living.yBodyRotO, living.yBodyRot);
             baby = living.isBaby();
             moveSpeed = living.walkAnimation.speed(partialTick);
+        }
+
+        long now = System.nanoTime();
+        double deltaTime = lastNanos == 0 ? 0.0 : Math.min((now - lastNanos) / 1.0e9, 0.25);
+        lastNanos = now;
+        boolean swimming = entity.isSwimming();
+        boolean gliding = false;
+        boolean crawling = false;
+        boolean alive = entity.isAlive();
+        boolean hasCape = false;
+        boolean hasHeadGear = false;
+        double health = 0;
+        double maxHealth = 0;
+        if (entity instanceof LivingEntity living) {
+            gliding = living.isFallFlying();
+            crawling = living.getPose() == net.minecraft.world.entity.Pose.SWIMMING && !entity.isInWater();
+            health = living.getHealth();
+            maxHealth = living.getMaxHealth();
+            hasHeadGear = !living.getItemBySlot(EquipmentSlot.HEAD).isEmpty();
+        }
+        boolean local = entity == net.minecraft.client.Minecraft.getInstance().player;
+        if (entity instanceof net.minecraft.client.player.AbstractClientPlayer player) {
+            hasCape = player.getSkin().cape() != null;
         }
 
         return new EntityQuerySnapshot(
@@ -56,7 +81,9 @@ public final class EntityQueryCapture {
                 entity.getY(),
                 entity.getZ(),
                 entity.hasCustomName() ? entity.getCustomName().getString() : entity.getName().getString(),
-                new LiveEquipment(entity));
+                new LiveEquipment(entity),
+                new EntityQuerySnapshot.Extras(swimming, gliding, crawling, alive, local, hasCape, hasHeadGear,
+                        health, maxHealth, deltaTime));
     }
 
     private record LiveEquipment(Entity entity) implements EntityQuerySnapshot.Equipment {
